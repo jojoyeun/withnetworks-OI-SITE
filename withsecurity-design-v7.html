@@ -1,0 +1,4095 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WithSecurity 영업 관리 시스템 — 설계 문서</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;600&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+/* ── TAB SHELL ── */
+:root {
+  --shell-bg: #0d1117;
+  --tab-h: 56px;
+  --content-bg: #f7f8fa;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--shell-bg);
+  min-height: 100vh;
+}
+
+/* Top bar */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: #0d1117;
+  border-bottom: 1px solid #30363d;
+  display: flex; align-items: center;
+  padding: 0 24px;
+  height: var(--tab-h);
+  gap: 0;
+}
+
+.topbar-logo {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px; font-weight: 600;
+  color: #7ee787; margin-right: 32px;
+  white-space: nowrap; flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.topbar-logo .logo-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #7ee787; display: inline-block;
+}
+
+.tabs {
+  display: flex; gap: 2px; align-items: center; flex: 1;
+}
+
+.tab-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 20px; height: var(--tab-h);
+  background: transparent; border: none; cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 13px; font-weight: 500;
+  color: #8b949e;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s; white-space: nowrap;
+  position: relative;
+}
+.tab-btn:hover { color: #e6edf3; background: #161b22; }
+.tab-btn.active {
+  color: #fff;
+  border-bottom-color: #58a6ff;
+  background: #161b22;
+}
+.tab-btn .tab-icon { font-size: 16px; }
+.tab-btn .tab-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; padding: 1px 6px; border-radius: 10px;
+  background: #21262d; color: #8b949e; margin-left: 2px;
+}
+.tab-btn.active .tab-num { background: #1f6feb; color: #fff; }
+
+/* Content area */
+.tab-content {
+  margin-top: var(--tab-h);
+  display: none;
+  background: var(--content-bg);
+  min-height: calc(100vh - var(--tab-h));
+  padding: 40px 24px 80px;
+}
+.tab-content.active { display: block; }
+
+/* Inner container for each tab */
+.tab-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tab-specific inner gaps */
+#tab-flow .tab-inner { gap: 40px; }
+#tab-sheet .tab-inner { gap: 40px; }
+#tab-policy .tab-inner { gap: 32px; }
+
+/* ── FLOW TAB STYLES ── */
+
+  :root {
+    --bg: #f0f4f8;
+    --white: #ffffff;
+    --dark: #111827;
+    --text: #374151;
+    --gray: #6b7280;
+    --gray-light: #e5e7eb;
+    --gray-pale: #f9fafb;
+
+    --blue: #1e40af;
+    --blue-mid: #3b82f6;
+    --blue-pale: #eff6ff;
+    --blue-border: #bfdbfe;
+
+    --green: #065f46;
+    --green-mid: #10b981;
+    --green-pale: #ecfdf5;
+    --green-border: #a7f3d0;
+
+    --orange: #92400e;
+    --orange-mid: #f59e0b;
+    --orange-pale: #fffbeb;
+    --orange-border: #fde68a;
+
+    --purple: #4c1d95;
+    --purple-mid: #7c3aed;
+    --purple-pale: #f5f3ff;
+    --purple-border: #ddd6fe;
+
+    /* Branch colors */
+    --hq: #1d4ed8;        /* 본사 - blue */
+    --hq-pale: #dbeafe;
+    --busan: #0f766e;     /* 부산 - teal */
+    --busan-pale: #ccfbf1;
+    --honam: #7e22ce;     /* 호남 - purple */
+    --honam-pale: #ede9fe;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 48px 24px 80px;
+  }
+
+  .container {
+    max-width: 1060px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+  }
+
+  /* ── Header ── */
+  .header { text-align: center; }
+  .header h1 { font-size: 26px; font-weight: 900; color: var(--dark); margin-bottom: 6px; }
+  .header p { font-size: 14px; color: var(--gray); }
+
+  /* ── Section label ── */
+  .section-label {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
+  }
+  .section-label .num {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    background: var(--dark); color: #fff; padding: 3px 10px; border-radius: 20px;
+  }
+  .section-label .title { font-size: 14px; font-weight: 700; color: var(--dark); }
+  .section-label .sub { font-size: 12px; color: var(--gray); }
+
+  /* ══════════════════════════════════════════
+     FLOW 01 — 신규 사이트 등록
+  ══════════════════════════════════════════ */
+  .flow01 {
+    background: var(--white);
+    border-radius: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);
+    overflow: hidden;
+  }
+
+  .flow01-inner {
+    padding: 28px;
+    display: grid;
+    grid-template-columns: 1fr 44px 1fr 44px 1fr;
+    align-items: start;
+    gap: 0;
+  }
+
+  /* INPUT node */
+  .input-node {
+    background: var(--blue-pale);
+    border: 2px solid var(--blue-border);
+    border-radius: 16px;
+    padding: 22px 18px;
+    text-align: center;
+  }
+  .input-node .icon { font-size: 30px; display: block; margin-bottom: 8px; }
+  .input-node .title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+
+  /* Branch selector */
+  .branch-selector {
+    background: white;
+    border: 1px solid var(--blue-border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 10px;
+    text-align: left;
+  }
+  .branch-selector .bs-label {
+    font-size: 10px; font-family: 'Space Mono', monospace;
+    color: var(--gray); margin-bottom: 8px; display: block;
+  }
+  .branch-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;
+    margin: 3px 3px 0 0; cursor: default;
+  }
+  .branch-pill.hq    { background: var(--hq-pale);    color: var(--hq); }
+  .branch-pill.busan { background: var(--busan-pale);  color: var(--busan); }
+  .branch-pill.honam { background: var(--honam-pale);  color: var(--honam); }
+
+  .multi-note {
+    margin-top: 8px; font-size: 10px; color: var(--gray);
+    background: #f9fafb; border-radius: 6px; padding: 5px 8px;
+    display: flex; align-items: flex-start; gap: 4px; line-height: 1.4;
+  }
+
+  /* Arrow */
+  .v-arrow {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: flex-start; padding-top: 36px; gap: 2px;
+  }
+  .v-arrow .al { height: 2px; width: 100%; }
+  .v-arrow .ah {
+    width: 0; height: 0;
+    border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+  }
+  .v-arrow .lbl {
+    font-size: 9px; font-family: 'Space Mono', monospace;
+    color: var(--gray); text-align: center; margin-top: 4px;
+  }
+  .v-arrow.blue .al { background: var(--blue-mid); }
+  .v-arrow.blue .ah { border-left: 7px solid var(--blue-mid); }
+
+  /* Master sheet node */
+  .master-node {
+    background: var(--green-pale);
+    border: 2px solid var(--green-border);
+    border-radius: 16px;
+    padding: 22px 18px;
+    text-align: center;
+  }
+  .master-node .icon { font-size: 30px; display: block; margin-bottom: 8px; }
+  .master-node .title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+  .master-node .sub { font-size: 12px; color: var(--gray); margin-bottom: 12px; }
+
+  /* Branch view tabs */
+  .branch-views {
+    display: flex; flex-direction: column; gap: 6px; margin-top: 10px;
+  }
+  .bv-row {
+    display: flex; align-items: center; gap: 6px;
+    background: white; border-radius: 8px; padding: 7px 10px;
+    border: 1px solid var(--green-border);
+    font-size: 12px; font-weight: 500; color: var(--dark);
+  }
+  .bv-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .bv-badge {
+    margin-left: auto; font-family: 'Space Mono', monospace;
+    font-size: 9px; color: var(--gray);
+  }
+
+  /* Filtered views node */
+  .filtered-node {
+    background: var(--white);
+    border: 1px solid var(--gray-light);
+    border-radius: 16px;
+    padding: 20px 16px;
+  }
+  .filtered-node .title {
+    font-size: 13px; font-weight: 700; color: var(--dark);
+    margin-bottom: 12px; text-align: center;
+  }
+  .fv-card {
+    border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+    font-size: 12px; font-weight: 600;
+  }
+  .fv-card.hq    { background: var(--hq-pale);    color: var(--hq);    border: 1px solid #93c5fd; }
+  .fv-card.busan { background: var(--busan-pale);  color: var(--busan); border: 1px solid #99f6e4; }
+  .fv-card.honam { background: var(--honam-pale);  color: var(--honam); border: 1px solid #c4b5fd; }
+  .fv-card .fv-name { font-size: 13px; margin-bottom: 4px; }
+  .fv-card .fv-sub { font-size: 10px; opacity: 0.8; font-weight: 400; }
+
+  .multi-tag {
+    background: #fef3c7; border: 1px solid #fde68a; color: #92400e;
+    border-radius: 6px; padding: 5px 9px; font-size: 10px; font-weight: 600;
+    text-align: center; margin-top: 4px;
+  }
+
+  /* ══════════════════════════════════════════
+     FLOW 02 — 콜 리포트
+  ══════════════════════════════════════════ */
+  .flow02-grid {
+    display: grid;
+    grid-template-columns: 1fr 44px 1fr 44px 1fr 44px 1fr;
+    align-items: start;
+    gap: 0;
+  }
+
+  .call-input-node {
+    background: var(--orange-pale);
+    border: 2px solid var(--orange-border);
+    border-radius: 16px;
+    padding: 22px 18px;
+    text-align: center;
+  }
+  .call-input-node .icon { font-size: 30px; display: block; margin-bottom: 8px; }
+  .call-input-node .title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+
+  .gate-node {
+    background: white;
+    border: 2px dashed var(--orange-mid);
+    border-radius: 16px;
+    padding: 22px 16px;
+    text-align: center;
+  }
+  .gate-node .icon { font-size: 28px; display: block; margin-bottom: 8px; }
+  .gate-node .title { font-size: 14px; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+  .gate-node .gate-flow {
+    background: var(--orange-pale); border-radius: 8px;
+    padding: 10px; text-align: left; font-size: 11px;
+    border: 1px solid var(--orange-border); margin-top: 8px;
+  }
+  .gate-node .gate-flow .gf-step {
+    display: flex; align-items: flex-start; gap: 6px;
+    margin-bottom: 6px; line-height: 1.4; color: var(--text);
+  }
+  .gate-node .gate-flow .gf-step:last-child { margin-bottom: 0; }
+  .gate-node .gate-flow .gf-num {
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    background: var(--orange-mid); color: white;
+    padding: 1px 5px; border-radius: 4px; flex-shrink: 0; margin-top: 1px;
+  }
+
+  .call-result-node {
+    background: var(--green-pale);
+    border: 2px solid var(--green-border);
+    border-radius: 16px;
+    padding: 22px 18px;
+    text-align: center;
+  }
+  .call-result-node .icon { font-size: 30px; display: block; margin-bottom: 8px; }
+  .call-result-node .title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+
+  .update-list {
+    background: white; border-radius: 8px; padding: 10px 12px;
+    text-align: left; border: 1px solid var(--green-border); margin-top: 8px;
+    font-size: 11px;
+  }
+  .update-list .ul-title {
+    font-size: 10px; font-family: 'Space Mono', monospace;
+    color: var(--gray); margin-bottom: 6px;
+  }
+  .update-list .ul-item {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 4px; color: var(--text);
+  }
+  .update-list .ul-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green-mid); flex-shrink: 0; }
+
+  /* MULTI-SITE note */
+  .multi-site-note {
+    background: #fffbeb; border: 1px dashed var(--orange-mid);
+    border-radius: 12px; padding: 14px 18px;
+    display: flex; align-items: flex-start; gap: 12px; margin-top: -8px;
+  }
+  .multi-site-note .msn-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+  .multi-site-note .msn-text { font-size: 13px; color: var(--dark); line-height: 1.6; }
+  .multi-site-note .msn-text strong { color: var(--orange); }
+  .msn-tags { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .msn-tag {
+    font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 10px;
+  }
+
+  /* ══════════════════════════════════════════
+     FLOW 03 — Dashboard
+  ══════════════════════════════════════════ */
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 1fr 44px 1fr;
+    align-items: start; gap: 0;
+  }
+
+  .dash-source {
+    background: var(--green-pale);
+    border: 2px solid var(--green-border);
+    border-radius: 16px;
+    padding: 22px 18px;
+  }
+  .dash-source .icon { font-size: 30px; display: block; margin-bottom: 8px; text-align: center; }
+  .dash-source .title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 4px; text-align: center; }
+  .dash-source .sub { font-size: 12px; color: var(--gray); text-align: center; margin-bottom: 14px; }
+
+  .data-tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .data-tag {
+    font-size: 11px; padding: 4px 10px; border-radius: 8px;
+    background: white; border: 1px solid var(--green-border);
+    color: var(--green); font-weight: 600;
+  }
+
+  .dash-dest {
+    background: var(--purple-pale);
+    border: 2px solid var(--purple-border);
+    border-radius: 16px;
+    padding: 22px 18px;
+  }
+  .dash-dest .icon { font-size: 30px; display: block; margin-bottom: 8px; text-align: center; }
+  .dash-dest .title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 14px; text-align: center; }
+
+  .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .metric-card {
+    background: white; border: 1px solid var(--purple-border);
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .metric-card .mc-icon { font-size: 16px; display: block; margin-bottom: 4px; }
+  .metric-card .mc-title { font-size: 12px; font-weight: 700; color: var(--dark); }
+  .metric-card .mc-sub { font-size: 10px; color: var(--gray); margin-top: 2px; }
+
+  .branch-metric {
+    margin-top: 10px; background: white; border: 1px solid var(--purple-border);
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .branch-metric .bm-title { font-size: 11px; font-weight: 700; color: var(--dark); margin-bottom: 8px; }
+  .bm-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .bm-label { font-size: 11px; font-weight: 600; min-width: 52px; }
+  .bm-bar-bg { flex: 1; background: var(--gray-light); border-radius: 4px; height: 6px; overflow: hidden; }
+  .bm-bar { height: 100%; border-radius: 4px; }
+
+  /* Arrow reuse */
+  .h-arrow {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: flex-start; padding-top: 40px;
+  }
+  .h-arrow .hl { height: 2px; width: 100%; }
+  .h-arrow .hh { width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+  .h-arrow .hlbl { font-size: 9px; font-family: 'Space Mono', monospace; color: var(--gray); text-align: center; margin-top: 4px; }
+
+  .h-arrow.blue  .hl { background: var(--blue-mid); }  .h-arrow.blue  .hh { border-left: 7px solid var(--blue-mid); }
+  .h-arrow.green .hl { background: var(--green-mid); } .h-arrow.green .hh { border-left: 7px solid var(--green-mid); }
+  .h-arrow.orange .hl { background: var(--orange-mid); } .h-arrow.orange .hh { border-left: 7px solid var(--orange-mid); }
+  .h-arrow.purple .hl { background: var(--purple-mid); } .h-arrow.purple .hh { border-left: 7px solid var(--purple-mid); }
+
+  .panel {
+    background: var(--white);
+    border-radius: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);
+    overflow: hidden;
+  }
+
+  .panel-body { padding: 28px; }
+
+
+/* ── SHEET TAB STYLES ── */
+
+:root {
+  --bg: #f7f8fa;
+  --white: #fff;
+  --dark: #0d1117;
+  --text: #24292f;
+  --gray: #57606a;
+  --gray-light: #d0d7de;
+  --gray-pale: #f6f8fa;
+
+  --hq: #0969da;        --hq-pale: #ddf4ff;     --hq-border: #54aeff;
+  --busan: #1a7f37;     --busan-pale: #dafbe1;  --busan-border: #4ac26b;
+  --honam: #8250df;     --honam-pale: #fbefff;  --honam-border: #c297ff;
+  --daegu: #bc4c00;     --daegu-pale: #fff1e5;  --daegu-border: #fb8f44;
+  --master: #cf222e;    --master-pale: #ffebe9; --master-border: #ff8182;
+  --call: #bf8700;      --call-pale: #fff8c5;   --call-border: #d4a72c;
+  --form: #1b7eb6;      --form-pale: #e8f4fd;   --form-border: #79c0ff;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--bg); color: var(--text);
+  padding: 48px 24px 80px;
+}
+.container { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+
+/* Header */
+.header { text-align: center; padding-bottom: 16px; border-bottom: 2px solid var(--gray-light); }
+.header h1 { font-size: 24px; font-weight: 900; color: var(--dark); margin-bottom: 6px; }
+.header p { font-size: 13px; color: var(--gray); }
+.header .version-badge {
+  display: inline-block; margin-bottom: 10px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  background: var(--dark); color: #7ee787; padding: 3px 10px; border-radius: 20px;
+}
+
+/* Legend */
+.legend {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  background: var(--white); border: 1px solid var(--gray-light);
+  border-radius: 10px; padding: 14px 20px; align-items: center;
+}
+.legend-title { font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: var(--gray); }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text); }
+.l-badge { font-size: 10px; font-family: 'IBM Plex Mono', monospace; padding: 2px 7px; border-radius: 4px; font-weight: 600; color: white; }
+
+/* Sheet block */
+.sheet-block {
+  background: var(--white); border-radius: 16px;
+  border: 1px solid var(--gray-light); overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.sheet-header {
+  padding: 16px 24px; display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid var(--gray-light);
+}
+.sheet-header .sh-icon { font-size: 24px; }
+.sheet-header .sh-name { font-size: 16px; font-weight: 700; }
+.sheet-header .sh-tag {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  padding: 3px 10px; border-radius: 20px; font-weight: 600;
+}
+.sheet-header .sh-desc { margin-left: auto; font-size: 12px; color: var(--gray); }
+
+/* Section divider */
+.section-divider {
+  padding: 10px 24px 8px; font-size: 11px; font-family: 'IBM Plex Mono', monospace;
+  color: var(--gray); background: var(--gray-pale);
+  border-bottom: 1px solid var(--gray-light); border-top: 1px solid var(--gray-light);
+  display: flex; align-items: center; gap: 8px;
+}
+.sd-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+/* Field table */
+.field-table { width: 100%; border-collapse: collapse; }
+.field-table th {
+  text-align: left; padding: 9px 24px;
+  font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+  color: var(--gray); font-weight: 600; letter-spacing: 0.5px;
+  background: var(--gray-pale); border-bottom: 1px solid var(--gray-light);
+}
+.field-table td {
+  padding: 10px 24px; font-size: 13px;
+  border-bottom: 1px solid #f0f0f0; vertical-align: top;
+}
+.field-table tr:last-child td { border-bottom: none; }
+.field-table tr:hover td { background: #fafafa; }
+
+/* updated row highlight */
+.field-table tr.updated td { background: #fffbeb !important; }
+.field-table tr.new-row td { background: #f0fff4 !important; }
+
+.f-num { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--gray); min-width: 28px; display: inline-block; }
+.f-name { font-weight: 600; color: var(--dark); }
+.changed-badge {
+  display: inline-block; font-size: 9px; font-family: 'IBM Plex Mono', monospace;
+  padding: 1px 6px; border-radius: 3px; margin-left: 6px; font-weight: 700;
+  background: #fff8c5; color: #7d4e00; border: 1px solid #d4a72c;
+}
+.new-badge {
+  display: inline-block; font-size: 9px; font-family: 'IBM Plex Mono', monospace;
+  padding: 1px 6px; border-radius: 3px; margin-left: 6px; font-weight: 700;
+  background: #dafbe1; color: #116329; border: 1px solid #4ac26b;
+}
+
+.f-type {
+  display: inline-block; font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap;
+}
+.f-type.auto     { background: #ddf4ff; color: #0550ae; }
+.f-type.dropdown { background: #fbefff; color: #6639ba; }
+.f-type.calc     { background: #dafbe1; color: #116329; }
+.f-type.manual   { background: #ffebe9; color: #a40e26; }
+.f-type.link     { background: #fff8c5; color: #7d4e00; }
+.f-type.text     { background: #f6f8fa; color: #57606a; border: 1px solid #d0d7de; }
+.f-type.system   { background: #f3f0ff; color: #6639ba; border: 1px solid #c297ff; }
+
+.f-options { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.f-opt {
+  font-size: 11px; padding: 2px 8px; border-radius: 4px;
+  background: #f6f8fa; border: 1px solid #d0d7de; color: var(--text);
+}
+
+.progress-map { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 5px; }
+.pm-item { background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 5px 8px; font-size: 10.5px; }
+.pm-item .pm-state { color: var(--text); font-weight: 500; }
+.pm-item .pm-pct { color: var(--hq); font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+
+.judgment-map { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+.jm-item { font-size: 11px; padding: 3px 10px; border-radius: 6px; font-weight: 600; }
+.jm-item.normal  { background: #dafbe1; color: #116329; }
+.jm-item.caution { background: #fff8c5; color: #7d4e00; }
+.jm-item.danger  { background: #ffebe9; color: #a40e26; }
+
+.alert-note {
+  margin: 0 24px 16px; background: #fff3cd; border: 1px solid #ffc107;
+  border-radius: 8px; padding: 12px 14px; font-size: 12px; color: #664d03;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.manual-note {
+  margin: 0 24px 16px; background: #ffebe9; border: 1px dashed #ff8182;
+  border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--master);
+  display: flex; gap: 8px; align-items: flex-start;
+}
+
+/* UID Rule box */
+.uid-box {
+  margin: 16px 24px; background: #0d1117; color: #c9d1d9;
+  border-radius: 12px; padding: 20px 24px; font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; line-height: 1.8;
+}
+.uid-box .uid-title { color: #7ee787; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.uid-box .uid-format { color: #79c0ff; font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+.uid-codes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
+.uid-code { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 7px 10px; }
+.uid-code .uc-val { color: #f0b429; font-weight: 700; font-size: 13px; }
+.uid-code .uc-label { color: #8b949e; font-size: 11px; }
+.uid-examples { margin-top: 12px; background: #161b22; border-radius: 8px; padding: 12px 14px; }
+.uid-examples .ue-title { color: #8b949e; font-size: 11px; margin-bottom: 8px; }
+.uid-ex { margin-bottom: 4px; }
+.uid-ex .ue-case { color: #8b949e; }
+.uid-ex .ue-result { color: #79c0ff; font-weight: 600; }
+
+/* Form block */
+.form-block {
+  background: var(--white); border-radius: 16px;
+  border: 2px solid var(--form-border); overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.form-header {
+  background: var(--form-pale); padding: 16px 24px;
+  display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid var(--form-border);
+}
+.form-header .fh-icon { font-size: 24px; }
+.form-header .fh-name { font-size: 16px; font-weight: 700; color: var(--form); }
+.form-header .fh-tag {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  background: var(--form); color: white; padding: 3px 10px; border-radius: 20px;
+}
+.form-header .fh-arrow {
+  margin-left: auto; font-size: 12px; color: var(--gray);
+  display: flex; align-items: center; gap: 6px;
+}
+.fh-arrow-chip {
+  background: var(--master-pale); border: 1px solid var(--master-border);
+  color: var(--master); font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 6px;
+}
+
+.form-body { padding: 24px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-field {
+  background: var(--gray-pale); border: 1px solid var(--gray-light);
+  border-radius: 10px; padding: 12px 14px;
+}
+.form-field.full { grid-column: 1 / -1; }
+.form-field.optional { border-style: dashed; }
+.ff-label { font-size: 11px; font-weight: 700; color: var(--dark); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+.ff-label .ff-req { color: var(--master); font-size: 10px; }
+.ff-label .ff-opt { color: var(--gray); font-size: 10px; }
+.ff-input {
+  background: white; border: 1px solid var(--gray-light);
+  border-radius: 6px; padding: 7px 10px; font-size: 12px;
+  color: var(--gray); width: 100%; font-family: 'Noto Sans KR', sans-serif;
+}
+.ff-input.auto-gen { background: #f0fff4; border-color: var(--busan-border); color: var(--busan); font-weight: 600; }
+.ff-input.system-gen { background: #f3f0ff; border-color: var(--honam-border); color: var(--honam); font-weight: 600; }
+.ff-select {
+  background: white; border: 1px solid var(--gray-light);
+  border-radius: 6px; padding: 7px 10px; font-size: 12px;
+  color: var(--gray); width: 100%; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2357606a' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.ff-note { font-size: 10px; color: var(--gray); margin-top: 5px; font-style: italic; }
+.ff-note.warning { color: var(--call); }
+.ff-note.info { color: var(--hq); }
+
+.form-arrow {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; padding: 16px 0; margin: 12px 0;
+  border-top: 1px dashed var(--gray-light); border-bottom: 1px dashed var(--gray-light);
+}
+.fa-label { font-size: 12px; color: var(--gray); display: flex; align-items: center; gap: 8px; }
+.fa-dest {
+  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+}
+.fa-chip {
+  font-size: 12px; font-weight: 700; padding: 5px 14px; border-radius: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* Sheet list summary */
+.sheet-names { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.sn-card {
+  border-radius: 12px; padding: 14px 18px;
+  display: flex; align-items: center; gap: 10px; border: 1px solid;
+}
+.sn-card .sn-num {
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  font-weight: 700; min-width: 20px;
+}
+.sn-card .sn-name { font-size: 13px; font-weight: 700; }
+.sn-card .sn-sub { font-size: 11px; margin-top: 2px; opacity: 0.75; }
+.sn-card .sn-badge {
+  margin-left: auto; font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; padding: 2px 7px; border-radius: 4px; font-weight: 600;
+}
+
+@media (max-width: 700px) {
+  .progress-map { grid-template-columns: repeat(2,1fr); }
+  .sheet-names { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  .uid-codes { grid-template-columns: repeat(2,1fr); }
+}
+
+
+/* ── POLICY TAB STYLES ── */
+
+:root {
+  --bg: #f7f8fa;
+  --white: #fff;
+  --dark: #0d1117;
+  --text: #24292f;
+  --gray: #57606a;
+  --gray-light: #d0d7de;
+  --gray-pale: #f6f8fa;
+
+  --hq: #0969da;        --hq-pale: #ddf4ff;     --hq-border: #54aeff;
+  --busan: #1a7f37;     --busan-pale: #dafbe1;  --busan-border: #4ac26b;
+  --honam: #8250df;     --honam-pale: #fbefff;  --honam-border: #c297ff;
+  --master: #cf222e;    --master-pale: #ffebe9; --master-border: #ff8182;
+  --call: #bf8700;      --call-pale: #fff8c5;   --call-border: #d4a72c;
+
+  --edit: #0969da;
+  --delete: #cf222e;
+  --close: #8250df;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--bg); color: var(--text);
+  padding: 48px 24px 80px;
+}
+.container { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+
+/* Header */
+.header { text-align: center; padding-bottom: 16px; border-bottom: 2px solid var(--gray-light); }
+.header .badge {
+  display: inline-block; margin-bottom: 10px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  background: var(--dark); color: #7ee787; padding: 3px 10px; border-radius: 20px;
+}
+.header h1 { font-size: 24px; font-weight: 900; color: var(--dark); margin-bottom: 6px; }
+.header p { font-size: 13px; color: var(--gray); }
+
+/* Policy card */
+.policy-card {
+  background: var(--white);
+  border-radius: 16px;
+  border: 1px solid var(--gray-light);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.policy-header {
+  padding: 18px 28px;
+  display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid var(--gray-light);
+}
+.ph-num {
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  font-weight: 700; width: 28px; height: 28px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  color: white; flex-shrink: 0;
+}
+.ph-title { font-size: 17px; font-weight: 900; color: var(--dark); }
+.ph-sub { font-size: 13px; color: var(--gray); margin-top: 2px; }
+.ph-badge {
+  margin-left: auto; font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; padding: 4px 12px; border-radius: 20px; font-weight: 700;
+}
+
+.policy-body { padding: 28px; }
+
+/* ── EDIT POLICY ── */
+.source-truth-box {
+  background: #ddf4ff; border: 2px solid #54aeff;
+  border-radius: 14px; padding: 20px 24px; margin-bottom: 20px;
+  display: flex; align-items: flex-start; gap: 16px;
+}
+.stb-icon { font-size: 32px; flex-shrink: 0; }
+.stb-content { flex: 1; }
+.stb-title { font-size: 15px; font-weight: 900; color: var(--dark); margin-bottom: 6px; }
+.stb-desc { font-size: 13px; color: var(--text); line-height: 1.7; }
+.stb-chip {
+  display: inline-block; font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 6px; margin-top: 10px;
+  background: var(--edit); color: white;
+}
+
+.editable-fields {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px;
+}
+.ef-item {
+  background: var(--gray-pale); border: 1px solid var(--gray-light);
+  border-radius: 8px; padding: 10px 12px; font-size: 12px; font-weight: 600;
+  color: var(--text); display: flex; align-items: center; gap: 7px;
+}
+.ef-item .ef-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--edit); flex-shrink: 0; }
+.ef-item.special { border-color: var(--call-border); background: var(--call-pale); }
+.ef-item.special .ef-dot { background: var(--call); }
+
+.uid-rule-box {
+  background: #fff8c5; border: 1px solid var(--call-border);
+  border-radius: 12px; padding: 16px 20px;
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.urb-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+.urb-title { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+.urb-desc { font-size: 12px; color: var(--text); line-height: 1.6; }
+.urb-example {
+  margin-top: 10px; background: white; border-radius: 8px;
+  padding: 10px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--call-border);
+}
+.ue-row { display: flex; align-items: center; gap: 8px; }
+.ue-before { color: var(--call); }
+.ue-after { color: var(--busan); font-weight: 700; }
+.ue-arrow { color: var(--gray); font-size: 14px; }
+
+/* Flow arrow between source and result */
+.flow-connector {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 16px 0;
+}
+.fc-line { width: 2px; height: 32px; background: linear-gradient(to bottom, var(--edit), #54aeff88); }
+.fc-head {
+  width: 0; height: 0;
+  border-left: 6px solid transparent; border-right: 6px solid transparent;
+  border-top: 8px solid var(--edit);
+}
+.fc-label {
+  font-size: 11px; font-family: 'IBM Plex Mono', monospace;
+  color: var(--edit); margin-top: 4px;
+}
+
+.sync-destinations {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.sd-item {
+  border-radius: 10px; padding: 12px 14px; text-align: center;
+  border: 1px solid; font-size: 12px; font-weight: 700;
+}
+.sd-item .sd-icon { font-size: 18px; display: block; margin-bottom: 5px; }
+.sd-item .sd-label { display: block; }
+.sd-item .sd-mode {
+  font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+  margin-top: 4px; display: block; font-weight: 400;
+}
+
+/* ── DELETE POLICY ── */
+.delete-flow {
+  display: grid; grid-template-columns: 1fr 48px 1fr; align-items: center; gap: 0;
+  margin-bottom: 20px;
+}
+.df-check {
+  background: var(--gray-pale); border: 1px solid var(--gray-light);
+  border-radius: 14px; padding: 20px; text-align: center;
+}
+.df-check .dc-icon { font-size: 28px; display: block; margin-bottom: 8px; }
+.df-check .dc-title { font-size: 14px; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+.df-check .dc-sub { font-size: 12px; color: var(--gray); line-height: 1.5; }
+
+.df-arrow {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 3px;
+}
+.dfa-line { width: 100%; height: 2px; background: var(--gray-light); }
+.dfa-head {
+  width: 0; height: 0;
+  border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+  border-left: 7px solid var(--gray-light);
+}
+.dfa-label { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--gray); margin-top: 4px; text-align: center; }
+
+.delete-cases {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.dc-case {
+  border-radius: 10px; padding: 14px 16px;
+  display: flex; align-items: flex-start; gap: 10px;
+  border: 1px solid;
+}
+.dc-case .dcc-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.dc-case .dcc-condition {
+  font-size: 11px; font-family: 'IBM Plex Mono', monospace;
+  font-weight: 700; margin-bottom: 5px;
+}
+.dc-case .dcc-result { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 3px; }
+.dc-case .dcc-desc { font-size: 12px; color: var(--gray); line-height: 1.5; }
+
+.dc-case.allow {
+  background: #dafbe1; border-color: var(--busan-border);
+}
+.dc-case.allow .dcc-condition { color: var(--busan); }
+
+.dc-case.block {
+  background: #ffebe9; border-color: var(--master-border);
+}
+.dc-case.block .dcc-condition { color: var(--master); }
+
+.dc-case.guide {
+  background: var(--honam-pale); border-color: var(--honam-border);
+}
+.dc-case.guide .dcc-condition { color: var(--honam); }
+
+/* System message */
+.sys-message {
+  background: var(--dark); color: #c9d1d9;
+  border-radius: 10px; padding: 14px 18px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.7;
+  margin-top: 12px;
+}
+.sm-prompt { color: #7ee787; }
+.sm-result-ok { color: #56d364; }
+.sm-result-err { color: #f85149; }
+.sm-result-guide { color: #d2a8ff; }
+
+/* ── CLOSE POLICY ── */
+.close-flow {
+  display: grid; grid-template-columns: 1fr 48px 1fr 48px 1fr;
+  align-items: center; gap: 0; margin-bottom: 20px;
+}
+.cf-node {
+  border-radius: 14px; padding: 18px 16px; text-align: center; border: 1px solid;
+}
+.cf-node .cn-icon { font-size: 26px; display: block; margin-bottom: 8px; }
+.cf-node .cn-title { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+.cf-node .cn-sub { font-size: 11px; color: var(--gray); line-height: 1.5; }
+
+.cf-arrow {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.cfa-line { width: 100%; height: 2px; }
+.cfa-head { width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+.cfa-label { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--gray); margin-top: 4px; text-align: center; }
+
+.alert-destinations {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; justify-content: center;
+}
+.ad-chip {
+  display: flex; align-items: center; gap: 6px;
+  border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 700;
+  border: 1px solid;
+}
+
+/* Summary box */
+.summary-box {
+  background: var(--dark); border-radius: 16px; padding: 28px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.sb-title {
+  font-size: 14px; font-weight: 700; color: #7ee787;
+  font-family: 'IBM Plex Mono', monospace; margin-bottom: 4px;
+}
+.sb-rule {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding-bottom: 14px; border-bottom: 1px solid #30363d;
+}
+.sb-rule:last-child { border-bottom: none; padding-bottom: 0; }
+.sbr-num {
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 700;
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+.sbr-content { flex: 1; }
+.sbr-title { font-size: 14px; font-weight: 700; color: white; margin-bottom: 5px; }
+.sbr-points { display: flex; flex-direction: column; gap: 3px; }
+.sbr-point { font-size: 12px; color: #8b949e; line-height: 1.5; }
+.sbr-point strong { color: #c9d1d9; }
+
+@media (max-width: 700px) {
+  .editable-fields { grid-template-columns: repeat(2, 1fr); }
+  .sync-destinations { grid-template-columns: 1fr; }
+  .delete-flow { grid-template-columns: 1fr; }
+  .close-flow { grid-template-columns: 1fr; }
+}
+
+
+/* Override container styles since we removed them */
+.tab-inner > * { width: 100%; }
+
+/* ── ALARM TAB STYLES ── */
+
+:root {
+  --bg: #f7f8fa;
+  --white: #fff;
+  --dark: #0d1117;
+  --text: #24292f;
+  --gray: #57606a;
+  --gray-light: #d0d7de;
+  --gray-pale: #f6f8fa;
+
+  --slack: #4a154b;
+  --slack-mid: #7c3177;
+  --slack-pale: #f8f0f8;
+  --slack-border: #c39ac3;
+
+  --mail: #0969da;
+  --mail-pale: #ddf4ff;
+  --mail-border: #54aeff;
+
+  --green: #1a7f37;
+  --green-pale: #dafbe1;
+  --green-border: #4ac26b;
+
+  --orange: #bc4c00;
+  --orange-pale: #fff1e5;
+  --orange-border: #fb8f44;
+
+  --red: #cf222e;
+  --red-pale: #ffebe9;
+  --red-border: #ff8182;
+
+  --purple: #8250df;
+  --purple-pale: #fbefff;
+  --purple-border: #c297ff;
+
+  --yellow: #bf8700;
+  --yellow-pale: #fff8c5;
+  --yellow-border: #d4a72c;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--bg); color: var(--text);
+  padding: 48px 24px 80px;
+}
+.container { max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 36px; }
+
+/* Header */
+.header { text-align: center; padding-bottom: 16px; border-bottom: 2px solid var(--gray-light); }
+.header .badge {
+  display: inline-block; margin-bottom: 10px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  background: var(--dark); color: #7ee787; padding: 3px 10px; border-radius: 20px;
+}
+.header h1 { font-size: 24px; font-weight: 900; color: var(--dark); margin-bottom: 6px; }
+.header p { font-size: 13px; color: var(--gray); }
+
+/* Channel legend */
+.channel-legend {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  background: var(--white); border: 1px solid var(--gray-light);
+  border-radius: 12px; padding: 16px 20px; align-items: center;
+}
+.cl-title { font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: var(--gray); margin-right: 4px; }
+.channel-chip {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+  border: 1px solid;
+}
+
+/* Alarm card */
+.alarm-card {
+  background: var(--white);
+  border-radius: 16px;
+  border: 1px solid var(--gray-light);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.alarm-header {
+  padding: 16px 24px; display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid var(--gray-light);
+}
+.ah-num {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 700;
+  color: white; flex-shrink: 0;
+}
+.ah-title { font-size: 16px; font-weight: 900; color: var(--dark); }
+.ah-sub { font-size: 12px; color: var(--gray); margin-top: 2px; }
+.ah-trigger {
+  margin-left: auto; font-size: 11px; font-family: 'IBM Plex Mono', monospace;
+  padding: 4px 12px; border-radius: 20px; font-weight: 700; white-space: nowrap;
+}
+
+.alarm-body { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+
+/* Trigger row */
+.trigger-row {
+  display: flex; align-items: center; gap: 0;
+}
+
+.trigger-node {
+  background: var(--gray-pale); border: 1px solid var(--gray-light);
+  border-radius: 12px; padding: 16px 18px; flex: 0 0 200px;
+  text-align: center;
+}
+.trigger-node .tn-icon { font-size: 26px; display: block; margin-bottom: 6px; }
+.trigger-node .tn-title { font-size: 13px; font-weight: 700; color: var(--dark); }
+.trigger-node .tn-sub { font-size: 11px; color: var(--gray); margin-top: 3px; line-height: 1.4; }
+
+/* Arrow */
+.tr-arrow {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 0 10px; flex-shrink: 0;
+}
+.tra-line { height: 2px; width: 32px; }
+.tra-head { width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+.tra-label { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--gray); white-space: nowrap; }
+
+/* Recipients + channels */
+.recipients-block { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+
+.recipient-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 14px 16px; border-radius: 12px; border: 1px solid;
+}
+.rr-target {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 700; flex: 0 0 140px;
+}
+.rr-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.rr-channels { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+.rr-divider { color: var(--gray-light); font-size: 18px; }
+
+/* Channel badges */
+.ch-slack {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--slack-pale); border: 1px solid var(--slack-border);
+  color: var(--slack); font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 6px;
+}
+.ch-mail {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--mail-pale); border: 1px solid var(--mail-border);
+  color: var(--mail); font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 6px;
+}
+
+/* Message preview */
+.msg-preview {
+  background: var(--dark); border-radius: 12px; padding: 18px 20px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; line-height: 1.8;
+  color: #c9d1d9;
+}
+.mp-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  padding-bottom: 10px; border-bottom: 1px solid #30363d;
+}
+.mp-channel-tag {
+  font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 700;
+}
+.mp-label { font-size: 11px; color: #8b949e; }
+.mp-title { color: #7ee787; font-weight: 600; font-size: 12px; margin-left: auto; }
+
+.mp-line { margin-bottom: 2px; }
+.mp-key { color: #8b949e; }
+.mp-val { color: #e6edf3; }
+.mp-val.green { color: #56d364; font-weight: 700; }
+.mp-val.red { color: #f85149; font-weight: 700; }
+.mp-val.yellow { color: #e3b341; font-weight: 700; }
+.mp-val.blue { color: #79c0ff; }
+.mp-val.orange { color: #ffa657; font-weight: 700; }
+.mp-divider { border: none; border-top: 1px solid #30363d; margin: 8px 0; }
+
+/* Timing badge */
+.timing-box {
+  background: var(--yellow-pale); border: 1px solid var(--yellow-border);
+  border-radius: 10px; padding: 10px 16px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px; color: var(--yellow);
+}
+.timing-box .tb-icon { font-size: 18px; flex-shrink: 0; }
+.timing-box strong { color: var(--dark); }
+
+/* Stagnation special layout */
+.stag-levels {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px;
+}
+.stag-level {
+  border-radius: 12px; padding: 16px; border: 1px solid;
+}
+.stag-level .sl-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; margin-bottom: 10px;
+  padding: 4px 12px; border-radius: 20px;
+}
+.stag-level .sl-title { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+.stag-level .sl-sub { font-size: 12px; color: var(--gray); line-height: 1.5; }
+.stag-level .sl-channels { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+
+/* Win/drop special */
+.win-drop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.wd-card {
+  border-radius: 12px; padding: 16px; border: 1px solid;
+}
+.wd-card .wdc-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 900; margin-bottom: 10px;
+  padding: 4px 14px; border-radius: 20px;
+}
+.wd-card .wdc-channels { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+
+/* Summary table */
+.summary-table {
+  width: 100%; border-collapse: collapse;
+  background: var(--white); border-radius: 16px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--gray-light);
+}
+.summary-table th {
+  background: var(--dark); color: #8b949e;
+  padding: 12px 20px; text-align: left;
+  font-size: 11px; font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600; letter-spacing: 0.5px;
+}
+.summary-table td {
+  padding: 12px 20px; border-bottom: 1px solid #f0f0f0;
+  font-size: 13px; vertical-align: middle;
+}
+.summary-table tr:last-child td { border-bottom: none; }
+.summary-table tr:hover td { background: #fafafa; }
+.st-event { font-weight: 700; color: var(--dark); display: flex; align-items: center; gap: 8px; }
+.st-timing {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  padding: 3px 8px; border-radius: 4px; font-weight: 600;
+  display: inline-block;
+}
+
+@media (max-width: 700px) {
+  .trigger-row { flex-direction: column; }
+  .stag-levels { grid-template-columns: 1fr; }
+  .win-drop-grid { grid-template-columns: 1fr; }
+}
+
+
+/* ── ALARM INNER GAP ── */
+#tab-alarm .tab-inner { gap: 36px; }
+#tab-dashboard .tab-inner { gap: 24px; }
+
+/* ── FORM WIREFRAME STYLES ── */
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: #f7f8fa;
+  padding: 40px 24px 80px;
+}
+.container { max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+
+.header { text-align: center; padding-bottom: 16px; border-bottom: 2px solid #d0d7de; }
+.header h1 { font-size: 22px; font-weight: 900; color: #0d1117; margin-bottom: 6px; }
+.header p { font-size: 13px; color: #57606a; }
+
+.screen-label {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+}
+.screen-label .num {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  background: #0d1117; color: #fff; padding: 3px 10px; border-radius: 20px;
+}
+.screen-label .title { font-size: 14px; font-weight: 700; color: #0d1117; }
+.screen-label .sub { font-size: 12px; color: #57606a; }
+
+/* App shell */
+.app-shell {
+  background: #0d1117; border-radius: 16px; overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+}
+.browser-bar {
+  background: #161b22; padding: 10px 16px;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid #30363d;
+}
+.browser-bar .dots { display: flex; gap: 6px; }
+.browser-bar .dots span { width: 10px; height: 10px; border-radius: 50%; }
+.browser-bar .url {
+  flex: 1; background: #21262d; border-radius: 6px;
+  padding: 4px 12px; margin: 0 12px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #58a6ff;
+}
+
+.app-body { display: flex; }
+
+/* Sidebar */
+.sidebar {
+  width: 200px; background: #161b22; border-right: 1px solid #30363d;
+  padding: 16px 0; flex-shrink: 0;
+}
+.sidebar-logo {
+  padding: 0 16px 14px; border-bottom: 1px solid #30363d; margin-bottom: 12px;
+}
+.sidebar-logo .name { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #7ee787; font-weight: 700; }
+.sidebar-logo .sub { font-size: 10px; color: #8b949e; margin-top: 2px; }
+
+.nav-items { padding: 0 8px; display: flex; flex-direction: column; gap: 2px; }
+.nav-item {
+  padding: 8px 10px; border-radius: 6px;
+  font-size: 12px; color: #8b949e;
+  display: flex; align-items: center; gap: 8px;
+  cursor: default;
+}
+.nav-item.active { background: #1f6feb22; color: #58a6ff; font-weight: 700; }
+.nav-item.highlight {
+  background: #238636; color: #fff; font-weight: 700;
+  position: relative;
+}
+.nav-item.highlight::after {
+  content: '← 신규 등록';
+  position: absolute; right: -88px; top: 50%; transform: translateY(-50%);
+  background: #238636; color: #fff;
+  font-size: 10px; padding: 3px 8px; border-radius: 4px;
+  white-space: nowrap;
+}
+.nav-divider { margin: 8px 8px; border-top: 1px solid #30363d; }
+
+/* Main area */
+.main { flex: 1; padding: 18px; min-height: 400px; }
+
+/* Top bar */
+.main-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.main-topbar .page-title { font-size: 15px; font-weight: 700; color: #e6edf3; }
+.main-topbar .actions { display: flex; gap: 8px; }
+.btn {
+  padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700;
+  cursor: default; display: flex; align-items: center; gap: 5px;
+}
+.btn-primary { background: #238636; color: #fff; }
+.btn-secondary { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
+.btn-blue { background: #1f6feb; color: #fff; }
+
+/* Filter bar */
+.filter-bar {
+  display: flex; gap: 8px; margin-bottom: 12px; align-items: center;
+}
+.filter-chip {
+  background: #21262d; border: 1px solid #30363d;
+  color: #8b949e; font-size: 11px; padding: 4px 10px; border-radius: 6px;
+}
+.filter-chip.active { background: #1f6feb22; border-color: #1f6feb55; color: #58a6ff; }
+
+/* Table */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  background: #161b22; color: #8b949e;
+  padding: 8px 10px; text-align: left;
+  font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+  border-bottom: 1px solid #30363d;
+}
+.data-table td {
+  padding: 9px 10px; border-bottom: 1px solid #21262d;
+  font-size: 11px; color: #c9d1d9; vertical-align: middle;
+}
+.data-table tr:hover td { background: #161b22; }
+
+.status-badge {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 4px;
+}
+.progress-bar-wrap { display: flex; align-items: center; gap: 6px; }
+.progress-bar { background: #30363d; border-radius: 3px; height: 5px; width: 50px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; }
+
+/* Call report button — KEY UI ELEMENT */
+.call-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #bf870022; border: 1px solid #d4a72c55;
+  color: #e3b341; font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 4px; cursor: default;
+  white-space: nowrap;
+}
+.call-btn.highlighted {
+  background: #bf8700; color: #fff;
+  box-shadow: 0 0 0 3px #e3b34155;
+  animation: pulse-border 1.5s ease infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 3px #e3b34155; }
+  50% { box-shadow: 0 0 0 6px #e3b34122; }
+}
+
+/* Callout annotations */
+.annotation {
+  position: relative; display: inline-block;
+}
+
+/* Callout boxes */
+.callout {
+  background: #fff; border-radius: 12px; padding: 14px 18px;
+  border: 2px solid; font-size: 13px; line-height: 1.6;
+}
+.callout .ca-title { font-weight: 700; margin-bottom: 4px; font-size: 14px; }
+.callout .ca-sub { font-size: 12px; color: #57606a; }
+
+/* Slide-in form panel */
+.form-panel {
+  background: #1c2128; border-left: 1px solid #30363d;
+  width: 320px; flex-shrink: 0; padding: 0;
+  display: flex; flex-direction: column;
+}
+.form-panel-header {
+  padding: 14px 18px; border-bottom: 1px solid #30363d;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.form-panel-header .fph-title { font-size: 13px; font-weight: 700; color: #e6edf3; }
+.form-panel-header .fph-close { color: #57606a; font-size: 16px; cursor: default; }
+.form-panel-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+
+.form-field-mini {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ffm-label { font-size: 10px; color: #8b949e; font-family: 'IBM Plex Mono', monospace; }
+.ffm-input {
+  background: #21262d; border: 1px solid #30363d; border-radius: 5px;
+  padding: 6px 10px; font-size: 11px; color: #c9d1d9;
+}
+.ffm-input.auto { color: #56d364; border-color: #238636; background: #23863611; }
+.ffm-input.prefilled { color: #79c0ff; border-color: #1f6feb55; background: #1f6feb11; }
+
+.form-panel-footer {
+  padding: 12px 18px; border-top: 1px solid #30363d;
+  display: flex; gap: 8px;
+}
+
+
+</style>
+</head>
+<body>
+
+<!-- Top bar with tabs -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <span class="logo-dot"></span>
+    WithSecurity
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('flow', this)">
+      <span class="tab-icon">🔀</span>
+      비즈니스 플로우
+      <span class="tab-num">01</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('sheet', this)">
+      <span class="tab-icon">📋</span>
+      시트 구조 설계
+      <span class="tab-num">02</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('policy', this)">
+      <span class="tab-icon">🗂️</span>
+      데이터 관리 정책
+      <span class="tab-num">03</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('alarm', this)">
+      <span class="tab-icon">🔔</span>
+      알람 구조 설계
+      <span class="tab-num">04</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('dashboard', this)">
+      <span class="tab-icon">📊</span>
+      대시보드
+      <span class="tab-num">05</span>
+    </button>
+  </div>
+</div>
+
+<!-- TAB 01: 비즈니스 플로우 -->
+<div id="tab-flow" class="tab-content active">
+  <div class="tab-inner">
+    <!-- ══════════════════════════════════
+       FLOW 01 — 신규 사이트 등록
+  ══════════════════════════════════ -->
+  <div class="panel">
+    <div class="panel-body">
+      <div class="section-label">
+        <span class="num">FLOW 01</span>
+        <span class="title">신규 사이트 등록</span>
+        <span class="sub">— 소속 선택 → 전체 시트 등록 → 지사별 뷰 분기</span>
+      </div>
+
+      <div class="flow01-inner">
+
+        <!-- INPUT -->
+        <div class="input-node">
+          <span class="icon">📋</span>
+          <div class="title">신규 사이트 등록</div>
+          <div class="branch-selector">
+            <span class="bs-label">① 소속 선택 (필수)</span>
+            <div>
+              <span class="branch-pill hq">🏢 본사</span>
+              <span class="branch-pill busan">🌊 부산지사</span>
+              <span class="branch-pill honam">🌿 호남지사</span>
+            </div>
+            <div class="multi-note">
+              <span>⚠️</span>
+              <span>복수 선택 가능 — 본사+부산 공동 진행 등</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ARROW 1 -->
+        <div class="v-arrow blue">
+          <div style="display:flex;align-items:center;width:100%;">
+            <div class="al"></div><div class="ah"></div>
+          </div>
+          <div class="lbl">자동 등록</div>
+        </div>
+
+        <!-- MASTER SHEET -->
+        <div class="master-node">
+          <span class="icon">📊</span>
+          <div class="title">전체 영업 현황 시트</div>
+          <div class="sub">MASTER DATA</div>
+          <div class="branch-views">
+            <div class="bv-row">
+              <div class="bv-dot" style="background:var(--hq);"></div>
+              <span style="font-size:12px;font-weight:600;color:var(--hq);">본사</span>
+              <span class="bv-badge">HQ VIEW</span>
+            </div>
+            <div class="bv-row">
+              <div class="bv-dot" style="background:var(--busan);"></div>
+              <span style="font-size:12px;font-weight:600;color:var(--busan);">부산지사</span>
+              <span class="bv-badge">BUSAN VIEW</span>
+            </div>
+            <div class="bv-row">
+              <div class="bv-dot" style="background:var(--honam);"></div>
+              <span style="font-size:12px;font-weight:600;color:var(--honam);">호남지사</span>
+              <span class="bv-badge">HONAM VIEW</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ARROW 2 -->
+        <div class="v-arrow blue">
+          <div style="display:flex;align-items:center;width:100%;">
+            <div class="al"></div><div class="ah"></div>
+          </div>
+          <div class="lbl">필터 뷰</div>
+        </div>
+
+        <!-- FILTERED VIEWS -->
+        <div class="filtered-node">
+          <div class="title">지사별 전용 뷰</div>
+          <div class="fv-card hq">
+            <div class="fv-name">🏢 본사 전용 시트</div>
+            <div class="fv-sub">본사 소속 사이트만 표시</div>
+          </div>
+          <div class="fv-card busan">
+            <div class="fv-name">🌊 부산지사 전용 시트</div>
+            <div class="fv-sub">부산지사 소속 사이트만 표시</div>
+          </div>
+          <div class="fv-card honam">
+            <div class="fv-name">🌿 호남지사 전용 시트</div>
+            <div class="fv-sub">호남지사 소속 사이트만 표시</div>
+          </div>
+          <div class="multi-tag">⚡ 공동 진행 사이트 → 해당 지사 모두에 표시</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════
+       FLOW 02 — 콜 리포트
+  ══════════════════════════════════ -->
+  <div class="panel">
+    <div class="panel-body">
+      <div class="section-label">
+        <span class="num">FLOW 02</span>
+        <span class="title">콜 리포트 등록</span>
+        <span class="sub">— 소속 선택 → 등록된 사이트만 선택 → 전체 시트 업데이트</span>
+      </div>
+
+      <div class="flow02-grid">
+
+        <!-- CALL INPUT -->
+        <div class="call-input-node">
+          <span class="icon">📞</span>
+          <div class="title">콜 리포트 작성</div>
+          <div class="branch-selector" style="background:white; border-color: var(--orange-border);">
+            <span class="bs-label">① 소속 선택</span>
+            <div>
+              <span class="branch-pill hq">🏢 본사</span>
+              <span class="branch-pill busan">🌊 부산</span>
+              <span class="branch-pill honam">🌿 호남</span>
+            </div>
+            <div class="multi-note" style="background:#fff8e1;">
+              <span>⚠️</span>
+              <span>복수 선택 시 공동 진행 사이트도 포함</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ARROW -->
+        <div class="h-arrow orange">
+          <div style="display:flex;align-items:center;width:100%;">
+            <div class="hl"></div><div class="hh"></div>
+          </div>
+          <div class="hlbl">사이트 로드</div>
+        </div>
+
+        <!-- GATE -->
+        <div class="gate-node">
+          <span class="icon">🔒</span>
+          <div class="title">등록된 사이트<br>선택</div>
+          <div class="gate-flow">
+            <div class="gf-step">
+              <span class="gf-num">1</span>
+              <span>선택한 소속(들)의 사이트 목록 자동 로드</span>
+            </div>
+            <div class="gf-step">
+              <span class="gf-num">2</span>
+              <span>전체 영업 현황 시트에 등록된 사이트만 선택 가능</span>
+            </div>
+            <div class="gf-step">
+              <span class="gf-num">3</span>
+              <span>미등록 사이트로는 콜 리포트 작성 불가</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ARROW -->
+        <div class="h-arrow orange">
+          <div style="display:flex;align-items:center;width:100%;">
+            <div class="hl"></div><div class="hh"></div>
+          </div>
+          <div class="hlbl">리포트 작성</div>
+        </div>
+
+        <!-- CALL REPORT FORM -->
+        <div class="call-input-node" style="background:white; border-color: var(--orange-border);">
+          <span class="icon">✍️</span>
+          <div class="title">콜 리포트 내용 입력</div>
+          <div class="update-list" style="border-color: var(--orange-border); margin-top: 10px;">
+            <div class="ul-title">입력 항목</div>
+            <div class="ul-item"><div class="ul-dot" style="background: var(--orange-mid);"></div>접촉방식 / 방문일시</div>
+            <div class="ul-item"><div class="ul-dot" style="background: var(--orange-mid);"></div>미팅목적 / 내용 / 결과</div>
+            <div class="ul-item"><div class="ul-dot" style="background: var(--orange-mid);"></div>액션플랜 / 기회(OI)</div>
+            <div class="ul-item"><div class="ul-dot" style="background: var(--orange-mid);"></div>현재 상태</div>
+          </div>
+        </div>
+
+        <!-- ARROW -->
+        <div class="h-arrow green">
+          <div style="display:flex;align-items:center;width:100%;">
+            <div class="hl"></div><div class="hh"></div>
+          </div>
+          <div class="hlbl">자동 업데이트</div>
+        </div>
+
+        <!-- MASTER UPDATE -->
+        <div class="call-result-node">
+          <span class="icon">📊</span>
+          <div class="title">전체 영업 현황 시트 업데이트</div>
+          <div class="update-list">
+            <div class="ul-title">업데이트 항목</div>
+            <div class="ul-item"><div class="ul-dot"></div>콜 리포트 최신 내용 반영</div>
+            <div class="ul-item"><div class="ul-dot"></div>현재 상태 갱신</div>
+            <div class="ul-item"><div class="ul-dot"></div>지사별 전용 뷰에도 동기화</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- MULTI SITE NOTE -->
+      <div class="multi-site-note" style="margin-top: 20px;">
+        <div class="msn-icon">⚡</div>
+        <div class="msn-text">
+          <strong>공동 진행 사이트 처리</strong> — 본사+부산지사가 함께 진행하는 사이트의 경우,
+          소속을 복수 선택하면 해당 사이트가 선택 목록에 포함됩니다.
+          등록된 콜 리포트는 <strong>전체 현황 시트 및 해당 지사 뷰 모두에 반영</strong>됩니다.
+          <div class="msn-tags">
+            <span class="msn-tag" style="background:var(--hq-pale); color:var(--hq);">🏢 본사</span>
+            <span style="font-size:13px; color:var(--gray); align-self:center;">+</span>
+            <span class="msn-tag" style="background:var(--busan-pale); color:var(--busan);">🌊 부산지사</span>
+            <span style="font-size:13px; color:var(--gray); align-self:center;">→</span>
+            <span class="msn-tag" style="background:#fef3c7; color:var(--orange);">두 지사 뷰에 모두 표시</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════
+       FLOW 03 — Dashboard
+  ══════════════════════════════════ -->
+  <div class="panel">
+    <div class="panel-body">
+      <div class="section-label">
+        <span class="num">FLOW 03</span>
+        <span class="title">전체 대시보드</span>
+        <span class="sub">— 마스터 시트 집계 → 통계 시각화</span>
+      </div>
+
+      <div class="dash-grid">
+
+        <!-- SOURCE -->
+        <div class="dash-source">
+          <span class="icon">📊</span>
+          <div class="title">전체 영업 현황 시트</div>
+          <div class="sub">MASTER DATA</div>
+          <div class="data-tags">
+            <span class="data-tag">사이트 정보</span>
+            <span class="data-tag">진척률</span>
+            <span class="data-tag">현재 상태</span>
+            <span class="data-tag">콜 리포트</span>
+            <span class="data-tag">담당자</span>
+            <span class="data-tag">지사 구분</span>
+          </div>
+        </div>
+
+        <!-- ARROW -->
+        <div class="h-arrow purple">
+          <div style="display:flex;align-items:center;width:100%;">
+            <div class="hl"></div><div class="hh"></div>
+          </div>
+          <div class="hlbl">집계 · 시각화</div>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div class="dash-dest">
+          <span class="icon">🖥️</span>
+          <div class="title">전체 대시보드</div>
+          <div class="metric-grid">
+            <div class="metric-card">
+              <span class="mc-icon">📈</span>
+              <div class="mc-title">전체 진척 현황</div>
+              <div class="mc-sub">단계별 사이트 수</div>
+            </div>
+            <div class="metric-card">
+              <span class="mc-icon">🎯</span>
+              <div class="mc-title">상태별 현황</div>
+              <div class="mc-sub">진행중 / 완료 / 보류</div>
+            </div>
+            <div class="metric-card">
+              <span class="mc-icon">👤</span>
+              <div class="mc-title">담당자별</div>
+              <div class="mc-sub">위드 담당자 실적</div>
+            </div>
+            <div class="metric-card">
+              <span class="mc-icon">📅</span>
+              <div class="mc-title">월별 추이</div>
+              <div class="mc-sub">등록 / 콜 리포트 수</div>
+            </div>
+          </div>
+          <div class="branch-metric">
+            <div class="bm-title">🏢 지사별 현황 비교</div>
+            <div class="bm-row">
+              <span class="bm-label" style="color:var(--hq);">본사</span>
+              <div class="bm-bar-bg"><div class="bm-bar" style="width:75%; background:var(--hq);"></div></div>
+            </div>
+            <div class="bm-row">
+              <span class="bm-label" style="color:var(--busan);">부산지사</span>
+              <div class="bm-bar-bg"><div class="bm-bar" style="width:50%; background:var(--busan);"></div></div>
+            </div>
+            <div class="bm-row">
+              <span class="bm-label" style="color:var(--honam);">호남지사</span>
+              <div class="bm-bar-bg"><div class="bm-bar" style="width:35%; background:var(--honam);"></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- TAB 02: 시트 구조 설계 -->
+<div id="tab-sheet" class="tab-content">
+  <div class="tab-inner">
+    <h1>📋 WithSecurity 시트 구조 설계</h1>
+    <p>시트 명세 · 고유번호 규칙 · 등록 폼 전체 정리</p>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <span class="legend-title">INPUT TYPE</span>
+    <div class="legend-item"><span class="l-badge" style="background:#0550ae;">AUTO</span>자동 생성</div>
+    <div class="legend-item"><span class="l-badge" style="background:#6639ba;">DROP</span>드롭다운</div>
+    <div class="legend-item"><span class="l-badge" style="background:#116329;">CALC</span>자동 계산</div>
+    <div class="legend-item"><span class="l-badge" style="background:#a40e26;">MANUAL</span>수기 입력</div>
+    <div class="legend-item"><span class="l-badge" style="background:#7d4e00;">LINK</span>연결/클릭</div>
+    <div class="legend-item"><span class="l-badge" style="background:#57606a;">TEXT</span>텍스트</div>
+    <div class="legend-item"><span class="l-badge" style="background:#6639ba; border: 1px solid #c297ff;">SYS</span>시스템(작성자)</div>
+    <div style="margin-left:auto; display:flex; gap:10px;">
+      <span style="font-size:11px; background:#fffbeb; border:1px solid #d4a72c; color:#7d4e00; padding:2px 8px; border-radius:4px; font-family:'IBM Plex Mono',monospace;">CHANGED</span>
+      <span style="font-size:11px; background:#dafbe1; border:1px solid #4ac26b; color:#116329; padding:2px 8px; border-radius:4px; font-family:'IBM Plex Mono',monospace;">NEW</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════
+       고유번호 규칙
+  ══════════════════════════ -->
+  <div class="sheet-block">
+    <div class="sheet-header" style="background:#0d1117;">
+      <span class="sh-icon">🔑</span>
+      <div><div class="sh-name" style="color:#7ee787;">고유번호 자동생성 규칙</div></div>
+      <span class="sh-tag" style="background:#238636; color:white;">ID RULE</span>
+    </div>
+    <div class="uid-box">
+      <div class="uid-title">📐 형식</div>
+      <div class="uid-format">[소속코드] - [연도(4자리)] - [순번(3자리)]</div>
+      <div style="color:#8b949e; margin-bottom:10px;">예시: HQ-2026-001 / BS-2026-003 / HQBS-2026-001 (공동)</div>
+
+      <div class="uid-title">🗂️ 소속코드 매핑</div>
+      <div class="uid-codes">
+        <div class="uid-code"><div class="uc-val">HQ</div><div class="uc-label">본사</div></div>
+        <div class="uid-code"><div class="uc-val">BS</div><div class="uc-label">부산지사</div></div>
+        <div class="uid-code"><div class="uc-val">HN</div><div class="uc-label">호남지사</div></div>
+        <div class="uid-code"><div class="uc-val">DG</div><div class="uc-label">대구지사</div></div>
+        <div class="uid-code"><div class="uc-val">ETC</div><div class="uc-label">기타</div></div>
+        <div class="uid-code" style="border-color:#f0b429;">
+          <div class="uc-val" style="color:#79c0ff;">HQBS</div>
+          <div class="uc-label">복수 선택 시 코드 합산</div>
+        </div>
+      </div>
+
+      <div class="uid-examples">
+        <div class="ue-title">💡 복수 소속 예시</div>
+        <div class="uid-ex"><span class="ue-case">본사 + 부산지사 → </span><span class="ue-result">HQBS-2026-001</span></div>
+        <div class="uid-ex"><span class="ue-case">본사 + 호남지사 → </span><span class="ue-result">HQHN-2026-001</span></div>
+        <div class="uid-ex"><span class="ue-case">부산 + 호남 → </span><span class="ue-result">BSHN-2026-001</span></div>
+        <div style="margin-top:8px; color:#8b949e; font-size:11px;">* 순번은 동일 소속코드+동일 연도 내 마지막 번호 기준 자동 증가</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════
+       SHEET 1 — [총괄] 전체 영업 현황
+  ════════════════════════════════ -->
+  <div class="sheet-block">
+    <div class="sheet-header" style="background:var(--master-pale); border-bottom-color:var(--master-border);">
+      <span class="sh-icon">📊</span>
+      <div><div class="sh-name" style="color:var(--master);">[총괄] 전체 영업 현황</div></div>
+      <span class="sh-tag" style="background:var(--master); color:white;">MASTER SHEET</span>
+      <span class="sh-desc">전 지사 통합 · 공동 진행 포함</span>
+    </div>
+
+    <!-- A. 신규 등록 -->
+    <div class="section-divider">
+      <div class="sd-dot" style="background:var(--hq);"></div>
+      A. 신규 사이트 등록 시 입력 항목
+    </div>
+    <table class="field-table">
+      <thead><tr>
+        <th style="width:36px;">#</th>
+        <th style="width:180px;">항목명</th>
+        <th style="width:110px;">입력 방식</th>
+        <th>상세 설명</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><span class="f-num">01</span></td><td><span class="f-name">등록일시</span></td><td><span class="f-type auto">AUTO</span></td><td>폼 제출 시 자동 생성</td></tr>
+        <tr><td><span class="f-num">02</span></td><td><span class="f-name">고유번호</span></td><td><span class="f-type auto">AUTO</span></td><td>위드 소속 + 연도 + 순번 자동 생성 (규칙 참고)</td></tr>
+        <tr><td><span class="f-num">03</span></td><td><span class="f-name">사이트명</span></td><td><span class="f-type text">TEXT</span></td><td>고객사 사이트명</td></tr>
+        <tr><td><span class="f-num">04</span></td><td><span class="f-name">사업명</span></td><td><span class="f-type text">TEXT</span></td><td>진행 사업/프로젝트명</td></tr>
+        <tr><td><span class="f-num">05</span></td><td><span class="f-name">고객 담당자</span></td><td><span class="f-type text">TEXT</span></td><td>고객사 담당자 이름</td></tr>
+        <tr><td><span class="f-num">06</span></td><td><span class="f-name">고객 부서명</span></td><td><span class="f-type text">TEXT</span></td><td>고객사 부서명</td></tr>
+        <tr><td><span class="f-num">07</span></td><td><span class="f-name">파트너명</span></td><td><span class="f-type text">TEXT</span></td><td>파트너사 명칭 (해당 시 작성)</td></tr>
+        <tr><td><span class="f-num">08</span></td><td><span class="f-name">파트너 담당자</span></td><td><span class="f-type text">TEXT</span></td><td>파트너사 담당자 이름 (해당 시 작성)</td></tr>
+        <tr><td><span class="f-num">09</span></td><td><span class="f-name">위드 담당자</span></td><td><span class="f-type system">SYS</span></td><td>로그인 사용자(작성자) 자동 생성 — 향후 회원 ID 연동</td></tr>
+        <tr><td><span class="f-num">10</span></td><td><span class="f-name">위드 소속</span></td><td><span class="f-type dropdown">DROP</span></td><td>
+          <div class="f-options">
+            <span class="f-opt" style="background:var(--hq-pale);color:var(--hq);">🏢 본사</span>
+            <span class="f-opt" style="background:var(--busan-pale);color:var(--busan);">🌊 부산지사</span>
+            <span class="f-opt" style="background:var(--honam-pale);color:var(--honam);">🌿 호남지사</span>
+            <span class="f-opt" style="background:var(--daegu-pale);color:var(--daegu);">🏙️ 대구지사</span>
+            <span class="f-opt">기타</span>
+            <span class="f-opt" style="background:#fff8c5;color:#7d4e00;">⚡ 복수 선택 가능</span>
+          </div>
+        </td></tr>
+        <tr><td><span class="f-num">11</span></td><td><span class="f-name">현재 상태</span></td><td><span class="f-type dropdown">DROP</span></td><td>
+          <div class="f-options">
+            <span class="f-opt">초기제안</span><span class="f-opt">OI확인(고객의지)</span>
+            <span class="f-opt">견적</span><span class="f-opt">MAKEUP(예산)</span>
+            <span class="f-opt">POC</span><span class="f-opt">RFP&amp;제안</span>
+            <span class="f-opt" style="background:#dafbe1;color:#116329;">수주</span>
+            <span class="f-opt" style="background:#ffebe9;color:#a40e26;">종료</span>
+          </div>
+        </td></tr>
+        <tr><td><span class="f-num">12</span></td><td><span class="f-name">진척율</span></td><td><span class="f-type calc">CALC</span></td><td>
+          현재 상태 값에 따라 자동 계산
+          <div class="progress-map">
+            <div class="pm-item"><div class="pm-state">초기제안</div><div class="pm-pct">10%</div></div>
+            <div class="pm-item"><div class="pm-state">OI확인</div><div class="pm-pct">20%</div></div>
+            <div class="pm-item"><div class="pm-state">견적</div><div class="pm-pct">35%</div></div>
+            <div class="pm-item"><div class="pm-state">MAKEUP</div><div class="pm-pct">50%</div></div>
+            <div class="pm-item"><div class="pm-state">POC</div><div class="pm-pct">65%</div></div>
+            <div class="pm-item"><div class="pm-state">RFP&제안</div><div class="pm-pct">80%</div></div>
+            <div class="pm-item"><div class="pm-state">수주</div><div class="pm-pct">100%</div></div>
+            <div class="pm-item"><div class="pm-state">종료</div><div class="pm-pct">0%</div></div>
+          </div>
+        </td></tr>
+        <tr><td><span class="f-num">13</span></td><td><span class="f-name">제품명</span></td><td><span class="f-type dropdown">DROP</span></td><td>
+          <div class="f-options"><span class="f-opt">withREX</span><span class="f-opt">withVTM</span><span class="f-opt">withFLOW</span><span class="f-opt">FortiSOAR</span></div>
+        </td></tr>
+        <tr><td><span class="f-num">14</span></td><td><span class="f-name">직판/파트너</span></td><td><span class="f-type dropdown">DROP</span></td><td>
+          <div class="f-options"><span class="f-opt">직판</span><span class="f-opt">파트너</span></div>
+        </td></tr>
+        <tr><td><span class="f-num">15</span></td><td><span class="f-name">유입경로</span></td><td><span class="f-type dropdown">DROP</span></td><td>
+          <div class="f-options"><span class="f-opt">인바운드</span><span class="f-opt">아웃바운드</span></div>
+        </td></tr>
+        <tr><td><span class="f-num">16</span></td><td><span class="f-name">시작일자</span></td><td><span class="f-type manual">MANUAL</span></td><td>영업 시작일 수기 입력</td></tr>
+        <tr><td><span class="f-num">17</span></td><td><span class="f-name">비고</span></td><td><span class="f-type text">TEXT</span></td><td>자유 입력</td></tr>
+      </tbody>
+    </table>
+
+    <!-- B. 콜리포트 응답 -->
+    <div class="section-divider">
+      <div class="sd-dot" style="background:var(--call);"></div>
+      B. 콜 리포트 등록 후 자동 업데이트 항목
+    </div>
+    <table class="field-table">
+      <thead><tr>
+        <th style="width:36px;">#</th><th style="width:180px;">항목명</th>
+        <th style="width:110px;">입력 방식</th><th>상세 설명</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><span class="f-num">18</span></td><td><span class="f-name">콜리포트 응답수</span></td><td><span class="f-type calc">CALC</span></td><td>해당 고유번호 기준 콜 리포트 등록 횟수 자동 집계</td></tr>
+        <tr><td><span class="f-num">19</span></td><td><span class="f-name">콜리포트 보기</span></td><td><span class="f-type link">LINK</span></td><td>클릭 시 해당 사이트 콜 리포트 목록으로 이동 (고유번호 기반 필터)</td></tr>
+        <tr class="updated"><td><span class="f-num">20</span></td><td><span class="f-name">최근 방문 일자 <span class="changed-badge">CHANGED</span></span></td><td><span class="f-type calc">CALC</span></td><td>
+          <strong>시작일자(16번) 기준으로 자동 생성</strong> — 콜 리포트 방문일시 중 가장 최근 값 반영
+        </td></tr>
+        <tr class="updated"><td><span class="f-num">21</span></td><td><span class="f-name">정체일수 <span class="changed-badge">CHANGED</span></span></td><td><span class="f-type calc">CALC</span></td><td>
+          최근 방문일자 기준 오늘까지 경과 일수 (매일 +1 자동 증가)
+          <div class="judgment-map">
+            <span class="jm-item normal">✅ 정상 — 14일 이하</span>
+            <span class="jm-item caution">⚠️ 주의 — 15 ~ 30일</span>
+            <span class="jm-item danger">🚨 위험 — 31일 이상</span>
+          </div>
+        </td></tr>
+        <tr><td><span class="f-num">22</span></td><td><span class="f-name">판정</span></td><td><span class="f-type calc">CALC</span></td><td>정체일수 기준 자동 판정 (위 기준 적용)</td></tr>
+      </tbody>
+    </table>
+
+    <!-- C. WIN/DROP -->
+    <div class="section-divider">
+      <div class="sd-dot" style="background:var(--master);"></div>
+      C. WIN / DROP 처리 <span class="changed-badge" style="margin-left:8px;">CHANGED + NEW</span>
+    </div>
+    <table class="field-table">
+      <thead><tr>
+        <th style="width:36px;">#</th><th style="width:180px;">항목명</th>
+        <th style="width:110px;">입력 방식</th><th>상세 설명</th>
+      </tr></thead>
+      <tbody>
+        <tr class="new-row"><td><span class="f-num">23</span></td><td><span class="f-name">WIN/DROP <span class="new-badge">NEW</span></span></td><td><span class="f-type dropdown">DROP</span></td><td>
+          <div class="f-options">
+            <span class="f-opt" style="background:#dafbe1;color:#116329;font-weight:700;">🏆 WIN</span>
+            <span class="f-opt" style="background:#ffebe9;color:#a40e26;font-weight:700;">❌ DROP</span>
+          </div>
+          현재 상태가 <strong>종료</strong>로 변경될 때 함께 선택
+        </td></tr>
+        <tr class="new-row"><td><span class="f-num">24</span></td><td><span class="f-name">WIN/DROP 사유 <span class="new-badge">NEW</span></span></td><td><span class="f-type text">TEXT</span></td><td>WIN 또는 DROP 선택 후 사유 자유 입력</td></tr>
+      </tbody>
+    </table>
+    <div class="alert-note" style="margin: 12px 24px 16px;">
+      🔔 <div><strong>자동 알림 발송</strong> — 현재 상태가 <strong style="color:#cf222e;">종료</strong>로 변경되면 Slack 또는 이메일로 자동 발송<br>
+      <span style="font-size:11px; color:#664d03;">발송 내용: 사이트명 / 사업명 / WIN or DROP / 사유 / 담당자</span></div>
+    </div>
+
+    <!-- D. 금액 -->
+    <div class="section-divider">
+      <div class="sd-dot" style="background:#0969da;"></div>
+      D. 예상 금액 · 확정 금액
+      <span style="font-size:10px;color:#57606a;margin-left:8px;">총괄 시트 수정 → 본사/부산/호남 전체 영업 현황 자동 반영</span>
+    </div>
+    <table class="field-table">
+      <thead><tr>
+        <th style="width:36px;">#</th>
+        <th style="width:180px;">항목명</th>
+        <th style="width:110px;">입력 방식</th>
+        <th>상세 설명</th>
+      </tr></thead>
+      <tbody>
+        <tr class="new-row">
+          <td><span class="f-num">25</span></td>
+          <td><span class="f-name">예상 매출 <span class="new-badge">NEW</span></span></td>
+          <td><span class="f-type manual">MANUAL</span></td>
+          <td>수시 입력/수정 가능 · 단위: 원</td>
+        </tr>
+        <tr class="new-row">
+          <td><span class="f-num">26</span></td>
+          <td><span class="f-name">예상 매입 <span class="new-badge">NEW</span></span></td>
+          <td><span class="f-type manual">MANUAL</span></td>
+          <td>수시 입력/수정 가능 · 단위: 원</td>
+        </tr>
+        <tr class="new-row">
+          <td><span class="f-num">27</span></td>
+          <td><span class="f-name">예상 매출이익 <span class="new-badge">NEW</span></span></td>
+          <td><span class="f-type calc">CALC</span></td>
+          <td>예상 매출 − 예상 매입 자동 계산</td>
+        </tr>
+        <tr class="new-row">
+          <td><span class="f-num">28</span></td>
+          <td><span class="f-name">확정 여부 <span class="new-badge">NEW</span></span></td>
+          <td><span class="f-type auto">AUTO</span></td>
+          <td>
+            수주(WIN) 처리 시 자동 확정
+            <div style="margin-top:6px;display:flex;gap:8px;">
+              <span style="font-size:11px;background:#dafbe1;border:1px solid #4ac26b;color:#116329;padding:3px 9px;border-radius:6px;font-weight:700;">✅ 확정</span>
+              <span style="font-size:11px;background:#f6f8fa;border:1px solid #d0d7de;color:#57606a;padding:3px 9px;border-radius:6px;">⏳ 미확정</span>
+            </div>
+            <div style="margin-top:8px;font-size:11px;color:#cf222e;font-weight:700;">
+              🔒 WIN 확정 이후 예상 매출/매입/매출이익 수정 불가 (잠금)
+            </div>
+            <div style="margin-top:3px;font-size:11px;color:#57606a;">
+              · 진행 중에는 최신값만 유지 (이력 미저장)<br>
+              · 금액 변경 맥락은 콜리포트 메모로 기록
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="alert-note" style="margin:12px 24px 16px;">
+      💡 <div>
+        <strong>WIN 처리 시 확인 팝업</strong> — 수주 확정 전 예상 금액을 한 번 더 확인하는 팝업이 표시됩니다.<br>
+        <span style="font-size:11px;color:#664d03;">금액 미입력 시 "미입력" 표시 · 차단 없이 담당자가 직접 판단 후 확정</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════
+       콜 리포트 시트 (공통 구조)
+  ════════════════════════════════ -->
+  <div class="sheet-block">
+    <div class="sheet-header" style="background:var(--call-pale); border-bottom-color:var(--call-border);">
+      <span class="sh-icon">📞</span>
+      <div><div class="sh-name" style="color:var(--call);">콜 리포트 시트 <span class="changed-badge" style="margin-left:8px;">CHANGED</span></div></div>
+      <span class="sh-tag" style="background:var(--call); color:white;">CALL REPORT</span>
+      <span class="sh-desc">[총괄] / [본사] / [부산지사] / [호남지사] — 동일 구조</span>
+    </div>
+
+    <table class="field-table">
+      <thead><tr>
+        <th style="width:36px;">#</th><th style="width:180px;">항목명</th>
+        <th style="width:110px;">입력 방식</th><th>상세 설명</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><span class="f-num">01</span></td><td><span class="f-name">등록일시</span></td><td><span class="f-type auto">AUTO</span></td><td>폼 제출 시 자동 생성</td></tr>
+        <tr class="updated"><td><span class="f-num">02</span></td><td><span class="f-name">고유번호 <span class="changed-badge">CHANGED</span></span></td><td><span class="f-type link">LINK</span></td><td>
+          폼에서 고유번호 선택 — 선택 시 사이트명 + 사업명 함께 표시 (드롭다운 미리보기)
+        </td></tr>
+        <tr class="updated"><td><span class="f-num">03</span></td><td><span class="f-name">사이트명 <span class="changed-badge">CHANGED</span></span></td><td><span class="f-type calc">CALC</span></td><td>고유번호 선택 시 전체 영업 현황에서 <strong>자동 불러오기</strong></td></tr>
+        <tr class="updated"><td><span class="f-num">04</span></td><td><span class="f-name">사업명 <span class="changed-badge">CHANGED</span></span></td><td><span class="f-type calc">CALC</span></td><td>고유번호 선택 시 전체 영업 현황에서 <strong>자동 불러오기</strong></td></tr>
+        <tr><td><span class="f-num">05</span></td><td><span class="f-name">접촉방식</span></td><td><span class="f-type dropdown">DROP</span></td><td>
+          <div class="f-options"><span class="f-opt">방문</span><span class="f-opt">전화</span><span class="f-opt">화상</span><span class="f-opt">이메일</span><span class="f-opt">기타</span></div>
+        </td></tr>
+        <tr><td><span class="f-num">06</span></td><td><span class="f-name">방문일시</span></td><td><span class="f-type manual">MANUAL</span></td><td>실제 방문/접촉 일시 (날짜+시간)</td></tr>
+        <tr><td><span class="f-num">07</span></td><td><span class="f-name">고객 참석자</span></td><td><span class="f-type text">TEXT</span></td><td>고객사 참석자 이름</td></tr>
+        <tr><td><span class="f-num">08</span></td><td><span class="f-name">내부 참석자</span></td><td><span class="f-type text">TEXT</span></td><td>WithSecurity 내부 참석자 (파트너 포함)</td></tr>
+        <tr><td><span class="f-num">09</span></td><td><span class="f-name">위드 담당자</span></td><td><span class="f-type system">SYS</span></td><td>로그인 사용자(작성자) 자동 생성 — 향후 회원 ID 연동</td></tr>
+        <tr><td><span class="f-num">10</span></td><td><span class="f-name">미팅목적</span></td><td><span class="f-type text">TEXT</span></td><td>미팅 목적 입력</td></tr>
+        <tr><td><span class="f-num">11</span></td><td><span class="f-name">미팅내용 / 결과</span></td><td><span class="f-type text">TEXT</span></td><td>미팅 내용 및 결과 상세 입력</td></tr>
+        <tr><td><span class="f-num">12</span></td><td><span class="f-name">액션플랜</span></td><td><span class="f-type text">TEXT</span></td><td>향후 액션 아이템</td></tr>
+        <tr><td><span class="f-num">13</span></td><td><span class="f-name">기회 (OI)</span></td><td><span class="f-type dropdown">DROP</span></td><td>
+          <div class="f-options"><span class="f-opt">있음</span><span class="f-opt">없음</span><span class="f-opt">확인중</span></div>
+        </td></tr>
+        <tr><td><span class="f-num">14</span></td><td><span class="f-name">현재 상태</span></td><td><span class="f-type dropdown">DROP</span></td><td>
+          <div class="f-options">
+            <span class="f-opt">초기제안</span><span class="f-opt">OI확인(고객의지)</span>
+            <span class="f-opt">견적</span><span class="f-opt">MAKEUP(예산)</span>
+            <span class="f-opt">POC</span><span class="f-opt">RFP&amp;제안</span>
+            <span class="f-opt" style="background:#dafbe1;color:#116329;">수주</span>
+            <span class="f-opt" style="background:#ffebe9;color:#a40e26;">종료</span>
+          </div>
+          <div style="margin-top:6px; font-size:11px; color:var(--call); background:var(--call-pale); border-radius:5px; padding:5px 8px; display:inline-block;">
+            ⚡ 저장 시 [총괄] 전체 영업 현황 현재 상태 자동 업데이트
+          </div>
+        </td></tr>
+        <tr><td><span class="f-num">15</span></td><td><span class="f-name">진척률</span></td><td><span class="f-type calc">CALC</span></td><td>현재 상태에 따라 자동 계산 (전체 영업 현황과 동일 규칙)</td></tr>
+        <tr><td><span class="f-num">16</span></td><td><span class="f-name">비고</span></td><td><span class="f-type text">TEXT</span></td><td>자유 입력</td></tr>
+      </tbody>
+    </table>
+    <div style="padding:12px 24px 16px; background:var(--gray-pale); border-top:1px solid var(--gray-light); display:flex; gap:16px; flex-wrap:wrap;">
+      <span style="font-size:12px; color:var(--gray);">📁 동일 구조 적용:</span>
+      <span style="font-size:12px; font-weight:700; color:var(--master);">📊 [총괄] 콜리포트</span>
+      <span style="font-size:12px; font-weight:700; color:var(--hq);">🏢 [본사] 콜리포트</span>
+      <span style="font-size:12px; font-weight:700; color:var(--busan);">🌊 [부산지사] 콜리포트</span>
+      <span style="font-size:12px; font-weight:700; color:var(--honam);">🌿 [호남지사] 콜리포트</span>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════
+       FORM 1 — 신규 사이트 등록 폼
+  ════════════════════════════════ -->
+  <div class="form-block">
+    <div class="form-header">
+      <span class="fh-icon">📋</span>
+      <div>
+        <div class="fh-name">신규 사이트 등록 폼</div>
+        <div style="font-size:12px; color:var(--gray); margin-top:2px;">작성 완료 후 자동 업로드</div>
+      </div>
+      <span class="fh-tag">SITE REGISTRATION</span>
+      <div class="fh-arrow">
+        제출 시 →
+        <span class="fh-arrow-chip">📊 [총괄] 전체 영업 현황</span>
+      </div>
+    </div>
+    <div class="form-body">
+      <div class="form-grid">
+
+        <!-- 위드 담당자 (자동) -->
+        <div class="form-field">
+          <div class="ff-label">위드 담당자 <span class="ff-req">시스템 자동</span></div>
+          <input class="ff-input system-gen" value="🔐 로그인 사용자 자동 생성" readonly>
+          <div class="ff-note info">향후 회원 ID 기반 자동 연동 예정</div>
+        </div>
+
+        <!-- 위드 소속 -->
+        <div class="form-field">
+          <div class="ff-label">위드 소속 <span class="ff-req">필수</span></div>
+          <select class="ff-select">
+            <option>🏢 본사</option>
+            <option>🌊 부산지사</option>
+            <option>🌿 호남지사</option>
+            <option>🏙️ 대구지사</option>
+            <option>기타</option>
+          </select>
+          <div class="ff-note warning">⚡ 복수 선택 가능 (공동 진행 시)</div>
+        </div>
+
+        <!-- 사이트명 -->
+        <div class="form-field">
+          <div class="ff-label">사이트명 <span class="ff-req">필수</span></div>
+          <input class="ff-input" placeholder="고객사 사이트명 입력">
+        </div>
+
+        <!-- 사업명 -->
+        <div class="form-field">
+          <div class="ff-label">사업명 <span class="ff-req">필수</span></div>
+          <input class="ff-input" placeholder="진행 사업/프로젝트명 입력">
+        </div>
+
+        <!-- 고객 담당자 -->
+        <div class="form-field">
+          <div class="ff-label">고객 담당자 <span class="ff-req">필수</span></div>
+          <input class="ff-input" placeholder="고객사 담당자 이름">
+        </div>
+
+        <!-- 고객 부서명 -->
+        <div class="form-field">
+          <div class="ff-label">고객 부서명 <span class="ff-req">필수</span></div>
+          <input class="ff-input" placeholder="고객사 부서명">
+        </div>
+
+        <!-- 파트너명 -->
+        <div class="form-field optional">
+          <div class="ff-label">파트너명 <span class="ff-opt">해당 시</span></div>
+          <input class="ff-input" placeholder="파트너사 명칭 (없으면 공란)">
+        </div>
+
+        <!-- 파트너 담당자 -->
+        <div class="form-field optional">
+          <div class="ff-label">파트너 담당자 <span class="ff-opt">해당 시</span></div>
+          <input class="ff-input" placeholder="파트너사 담당자 이름">
+        </div>
+
+        <!-- 현재 상태 -->
+        <div class="form-field">
+          <div class="ff-label">현재 상태 <span class="ff-req">필수</span></div>
+          <select class="ff-select">
+            <option>초기제안</option><option>OI확인(고객의지)</option>
+            <option>견적</option><option>MAKEUP(예산)</option>
+            <option>POC</option><option>RFP&제안</option>
+            <option>수주</option><option>종료</option>
+          </select>
+        </div>
+
+        <!-- 제품명 -->
+        <div class="form-field">
+          <div class="ff-label">제품명 <span class="ff-req">필수</span></div>
+          <select class="ff-select">
+            <option>withREX</option><option>withVTM</option>
+            <option>withFLOW</option><option>FortiSOAR</option>
+          </select>
+        </div>
+
+        <!-- 직판/파트너 -->
+        <div class="form-field">
+          <div class="ff-label">직판/파트너 <span class="ff-req">필수</span></div>
+          <select class="ff-select"><option>직판</option><option>파트너</option></select>
+        </div>
+
+        <!-- 유입경로 -->
+        <div class="form-field">
+          <div class="ff-label">유입경로 <span class="ff-req">필수</span></div>
+          <select class="ff-select"><option>인바운드</option><option>아웃바운드</option></select>
+        </div>
+
+        <!-- 시작일자 -->
+        <div class="form-field">
+          <div class="ff-label">시작일자 <span class="ff-req">필수</span></div>
+          <input class="ff-input" type="text" placeholder="YYYY-MM-DD">
+        </div>
+
+        <!-- 비고 -->
+        <div class="form-field">
+          <div class="ff-label">비고 <span class="ff-opt">선택</span></div>
+          <input class="ff-input" placeholder="기타 사항 자유 입력">
+        </div>
+
+        <!-- 자동생성 항목 안내 -->
+        <div class="form-field full" style="background:#f0fff4; border-color:var(--busan-border);">
+          <div class="ff-label" style="color:var(--busan);">🔄 제출 시 자동 생성 항목</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+            <span style="font-size:11px; background:white; border:1px solid var(--busan-border); color:var(--busan); padding:3px 9px; border-radius:6px; font-weight:600;">📅 등록일시</span>
+            <span style="font-size:11px; background:white; border:1px solid var(--busan-border); color:var(--busan); padding:3px 9px; border-radius:6px; font-weight:600;">🔑 고유번호 (소속코드-연도-순번)</span>
+            <span style="font-size:11px; background:white; border:1px solid var(--busan-border); color:var(--busan); padding:3px 9px; border-radius:6px; font-weight:600;">📊 진척율 (상태 기반)</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════
+       FORM 2 — 콜리포트 등록 폼
+  ════════════════════════════════ -->
+  <div class="form-block" style="border-color:var(--call-border);">
+    <div class="form-header" style="background:var(--call-pale); border-bottom-color:var(--call-border);">
+      <span class="fh-icon">📞</span>
+      <div>
+        <div class="fh-name" style="color:var(--call);">콜 리포트 등록 폼</div>
+        <div style="font-size:12px; color:var(--gray); margin-top:2px;">작성 완료 후 자동 업로드</div>
+      </div>
+      <span class="fh-tag" style="background:var(--call);">CALL REPORT</span>
+      <div class="fh-arrow">
+        제출 시 →
+        <span class="fh-arrow-chip" style="background:var(--call-pale); border-color:var(--call-border); color:var(--call);">📞 [총괄] 콜리포트</span>
+        <span class="fh-arrow-chip">📊 [총괄] 현황 업데이트</span>
+      </div>
+    </div>
+    <div class="form-body">
+      <div class="form-grid">
+
+        <!-- 위드 담당자 (자동) -->
+        <div class="form-field">
+          <div class="ff-label">위드 담당자 <span class="ff-req">시스템 자동</span></div>
+          <input class="ff-input system-gen" value="🔐 로그인 사용자 자동 생성" readonly>
+          <div class="ff-note info">향후 회원 ID 기반 자동 연동</div>
+        </div>
+
+        <!-- 고유번호 선택 -->
+        <div class="form-field">
+          <div class="ff-label">고유번호 선택 <span class="ff-req">필수</span></div>
+          <select class="ff-select">
+            <option>HQ-2026-001 | ABC사이트 | ABC사업</option>
+            <option>BS-2026-003 | DEF사이트 | DEF사업</option>
+            <option>HQBS-2026-001 | GHI사이트 | GHI사업</option>
+          </select>
+          <div class="ff-note info">📌 드롭다운에 고유번호 + 사이트명 + 사업명 함께 표시</div>
+        </div>
+
+        <!-- 사이트명 자동 -->
+        <div class="form-field">
+          <div class="ff-label">사이트명</div>
+          <input class="ff-input auto-gen" value="🔄 고유번호 선택 시 자동 입력" readonly>
+        </div>
+
+        <!-- 사업명 자동 -->
+        <div class="form-field">
+          <div class="ff-label">사업명</div>
+          <input class="ff-input auto-gen" value="🔄 고유번호 선택 시 자동 입력" readonly>
+        </div>
+
+        <!-- 접촉방식 -->
+        <div class="form-field">
+          <div class="ff-label">접촉방식 <span class="ff-req">필수</span></div>
+          <select class="ff-select">
+            <option>방문</option><option>전화</option>
+            <option>화상</option><option>이메일</option><option>기타</option>
+          </select>
+        </div>
+
+        <!-- 방문일시 -->
+        <div class="form-field">
+          <div class="ff-label">방문일시 <span class="ff-req">필수</span></div>
+          <input class="ff-input" placeholder="YYYY-MM-DD HH:MM">
+        </div>
+
+        <!-- 고객 참석자 -->
+        <div class="form-field">
+          <div class="ff-label">고객 참석자 <span class="ff-req">필수</span></div>
+          <input class="ff-input" placeholder="고객사 참석자 이름">
+        </div>
+
+        <!-- 내부 참석자 -->
+        <div class="form-field">
+          <div class="ff-label">내부 참석자 <span class="ff-req">필수</span></div>
+          <input class="ff-input" placeholder="내부 참석자 (파트너 포함)">
+        </div>
+
+        <!-- 미팅목적 -->
+        <div class="form-field full">
+          <div class="ff-label">미팅목적 <span class="ff-req">필수</span></div>
+          <input class="ff-input" placeholder="미팅 목적 입력">
+        </div>
+
+        <!-- 미팅내용/결과 -->
+        <div class="form-field full">
+          <div class="ff-label">미팅내용 / 결과 <span class="ff-req">필수</span></div>
+          <input class="ff-input" placeholder="미팅에서 논의된 내용 및 결과 상세 입력">
+        </div>
+
+        <!-- 액션플랜 -->
+        <div class="form-field full">
+          <div class="ff-label">액션플랜 <span class="ff-req">필수</span></div>
+          <input class="ff-input" placeholder="향후 액션 아이템 입력">
+        </div>
+
+        <!-- 기회(OI) -->
+        <div class="form-field">
+          <div class="ff-label">기회 (OI) <span class="ff-req">필수</span></div>
+          <select class="ff-select"><option>있음</option><option>없음</option><option>확인중</option></select>
+        </div>
+
+        <!-- 현재 상태 -->
+        <div class="form-field">
+          <div class="ff-label">현재 상태 <span class="ff-req">필수</span></div>
+          <select class="ff-select">
+            <option>초기제안</option><option>OI확인(고객의지)</option>
+            <option>견적</option><option>MAKEUP(예산)</option>
+            <option>POC</option><option>RFP&제안</option>
+            <option>수주</option><option>종료</option>
+          </select>
+          <div class="ff-note warning">⚡ 저장 시 [총괄] 전체 영업 현황 현재 상태 자동 업데이트</div>
+        </div>
+
+        <!-- 비고 -->
+        <div class="form-field full optional">
+          <div class="ff-label">비고 <span class="ff-opt">선택</span></div>
+          <input class="ff-input" placeholder="기타 사항 자유 입력">
+        </div>
+
+        <!-- 자동 반영 안내 -->
+        <div class="form-field full" style="background:#fff8c5; border-color:var(--call-border);">
+          <div class="ff-label" style="color:var(--call);">🔄 제출 시 [총괄] 전체 영업 현황에 자동 반영되는 항목</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+            <span style="font-size:11px; background:white; border:1px solid var(--call-border); color:var(--call); padding:3px 9px; border-radius:6px; font-weight:600;">📊 콜리포트 응답수 +1</span>
+            <span style="font-size:11px; background:white; border:1px solid var(--call-border); color:var(--call); padding:3px 9px; border-radius:6px; font-weight:600;">📅 최근 방문일자 갱신</span>
+            <span style="font-size:11px; background:white; border:1px solid var(--call-border); color:var(--call); padding:3px 9px; border-radius:6px; font-weight:600;">⏱️ 정체일수 초기화</span>
+            <span style="font-size:11px; background:white; border:1px solid var(--call-border); color:var(--call); padding:3px 9px; border-radius:6px; font-weight:600;">🚦 판정 재계산</span>
+            <span style="font-size:11px; background:white; border:1px solid var(--call-border); color:var(--call); padding:3px 9px; border-radius:6px; font-weight:600;">🔄 현재 상태 / 진척률 업데이트</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════
+       최종 시트 목록
+  ════════════════════════════ -->
+  <div class="sheet-block">
+    <div class="sheet-header" style="background:var(--dark);">
+      <span class="sh-icon">📁</span>
+      <div><div class="sh-name" style="color:white;">최종 시트 목록</div></div>
+      <span class="sh-tag" style="background:#30363d; color:#8b949e;">총 8개 시트</span>
+    </div>
+    <div style="padding:20px 24px; display:flex; flex-direction:column; gap:8px;">
+      <!-- 총괄 -->
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--master-pale);border:1px solid var(--master-border);border-radius:8px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--master);min-width:20px;font-weight:700;">1</span>
+        <span style="font-weight:700;color:var(--master);">[총괄] 전체 영업 현황</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--gray);font-family:'IBM Plex Mono',monospace;">MASTER</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--call-pale);border:1px solid var(--call-border);border-radius:8px;margin-left:24px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--call);min-width:20px;font-weight:700;">2</span>
+        <span style="font-weight:700;color:var(--call);">[총괄] 콜 리포트</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--gray);font-family:'IBM Plex Mono',monospace;">CALL LOG</span>
+      </div>
+      <!-- 본사 -->
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--hq-pale);border:1px solid var(--hq-border);border-radius:8px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--hq);min-width:20px;font-weight:700;">3</span>
+        <span style="font-weight:700;color:var(--hq);">[본사] 전체 영업 현황</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--gray);font-family:'IBM Plex Mono',monospace;">FILTER VIEW</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--hq-pale);border:1px solid var(--hq-border);border-radius:8px;margin-left:24px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--hq);min-width:20px;font-weight:700;">4</span>
+        <span style="font-weight:700;color:var(--hq);">[본사] 콜 리포트</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--gray);font-family:'IBM Plex Mono',monospace;">CALL LOG</span>
+      </div>
+      <!-- 부산 -->
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--busan-pale);border:1px solid var(--busan-border);border-radius:8px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--busan);min-width:20px;font-weight:700;">5</span>
+        <span style="font-weight:700;color:var(--busan);">[부산지사] 전체 영업 현황</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--gray);font-family:'IBM Plex Mono',monospace;">FILTER VIEW</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--busan-pale);border:1px solid var(--busan-border);border-radius:8px;margin-left:24px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--busan);min-width:20px;font-weight:700;">6</span>
+        <span style="font-weight:700;color:var(--busan);">[부산지사] 콜 리포트</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--gray);font-family:'IBM Plex Mono',monospace;">CALL LOG</span>
+      </div>
+      <!-- 호남 -->
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--honam-pale);border:1px solid var(--honam-border);border-radius:8px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--honam);min-width:20px;font-weight:700;">7</span>
+        <span style="font-weight:700;color:var(--honam);">[호남지사] 전체 영업 현황</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--gray);font-family:'IBM Plex Mono',monospace;">FILTER VIEW</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--honam-pale);border:1px solid var(--honam-border);border-radius:8px;margin-left:24px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--honam);min-width:20px;font-weight:700;">8</span>
+        <span style="font-weight:700;color:var(--honam);">[호남지사] 콜 리포트</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--gray);font-family:'IBM Plex Mono',monospace;">CALL LOG</span>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- TAB 03: 데이터 관리 정책 -->
+<div id="tab-policy" class="tab-content">
+  <div class="tab-inner">
+    <h1>🗂️ WithSecurity 데이터 관리 정책</h1>
+    <p>수정 · 삭제 · 종료 처리 규칙 — 확정안</p>
+  </div>
+
+
+  <!-- ══════════════════
+       POLICY 01 — 수정
+  ══════════════════ -->
+  <div class="policy-card">
+    <div class="policy-header" style="background:#ddf4ff; border-bottom-color:#54aeff;">
+      <div class="ph-num" style="background:var(--edit);">1</div>
+      <div>
+        <div class="ph-title">수정 정책</div>
+        <div class="ph-sub">Single Source of Truth — 총괄 시트에서만 수정</div>
+      </div>
+      <span class="ph-badge" style="background:var(--edit); color:white;">EDIT RULE</span>
+    </div>
+    <div class="policy-body">
+
+      <!-- Source of truth -->
+      <div class="source-truth-box">
+        <div class="stb-icon">📊</div>
+        <div class="stb-content">
+          <div class="stb-title">[총괄] 전체 영업 현황 = 유일한 수정 원천</div>
+          <div class="stb-desc">
+            아래 8개 필드는 <strong>[총괄] 전체 영업 현황 시트에서만 수정</strong>합니다.<br>
+            나머지 모든 시트는 고유번호를 키로 LOOKUP하여 자동 반영 — 별도 수정 불필요.
+          </div>
+          <span class="stb-chip">✏️ 수정 가능 위치: [총괄] 시트 단 1곳</span>
+        </div>
+      </div>
+
+      <!-- Editable fields -->
+      <div style="font-size:12px; font-weight:700; color:var(--gray); margin-bottom:10px; font-family:'IBM Plex Mono',monospace;">수정 가능한 8개 필드</div>
+      <div class="editable-fields">
+        <div class="ef-item"><span class="ef-dot"></span>사이트명</div>
+        <div class="ef-item"><span class="ef-dot"></span>사업명</div>
+        <div class="ef-item"><span class="ef-dot"></span>고객 담당자</div>
+        <div class="ef-item"><span class="ef-dot"></span>고객 부서명</div>
+        <div class="ef-item"><span class="ef-dot"></span>파트너명</div>
+        <div class="ef-item"><span class="ef-dot"></span>파트너 담당자</div>
+        <div class="ef-item"><span class="ef-dot"></span>위드 담당자</div>
+        <div class="ef-item ef-item special"><span class="ef-dot"></span>위드 소속</div>
+      </div>
+
+      <!-- UID rule -->
+      <div class="uid-rule-box" style="margin-bottom:20px;">
+        <div class="urb-icon">🔒</div>
+        <div>
+          <div class="urb-title">위드 소속 변경 시 — 고유번호는 고정</div>
+          <div class="urb-desc">
+            위드 소속이 변경되어도 <strong>최초 등록 시 발급된 고유번호는 절대 변경하지 않습니다.</strong><br>
+            고유번호를 변경하면 연결된 콜리포트 데이터 이관이 필요해 데이터 정합성이 깨질 수 있기 때문입니다.
+          </div>
+          <div class="urb-example">
+            <div class="ue-row">
+              <span style="color:#8b949e; font-size:11px;">Before</span>
+              <span class="ue-before">위드 소속: 본사 → 고유번호: HQ-2026-001</span>
+            </div>
+            <div class="ue-row">
+              <span style="color:#8b949e; font-size:11px; margin-right:2px;">After&nbsp;</span>
+              <span class="ue-before">위드 소속: 부산지사로 변경</span>
+              <span class="ue-arrow">→</span>
+              <span class="ue-after">고유번호: HQ-2026-001 유지</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flow connector -->
+      <div class="flow-connector">
+        <div class="fc-line"></div>
+        <div class="fc-head"></div>
+        <div class="fc-label">총괄 시트 수정 → 고유번호 기반 자동 동기화</div>
+      </div>
+
+      <!-- Sync destinations -->
+      <div class="sync-destinations" style="margin-top:16px;">
+        <div class="sd-item" style="background:var(--hq-pale); border-color:var(--hq-border); color:var(--hq);">
+          <span class="sd-icon">🏢</span>
+          <span class="sd-label">[본사] 영업 현황</span>
+          <span class="sd-mode">LOOKUP 자동 반영</span>
+        </div>
+        <div class="sd-item" style="background:var(--busan-pale); border-color:var(--busan-border); color:var(--busan);">
+          <span class="sd-icon">🌊</span>
+          <span class="sd-label">[부산지사] 영업 현황</span>
+          <span class="sd-mode">LOOKUP 자동 반영</span>
+        </div>
+        <div class="sd-item" style="background:var(--honam-pale); border-color:var(--honam-border); color:var(--honam);">
+          <span class="sd-icon">🌿</span>
+          <span class="sd-label">[호남지사] 영업 현황</span>
+          <span class="sd-mode">LOOKUP 자동 반영</span>
+        </div>
+        <div class="sd-item" style="background:var(--master-pale); border-color:var(--master-border); color:var(--master);">
+          <span class="sd-icon">📞</span>
+          <span class="sd-label">[총괄] 콜리포트</span>
+          <span class="sd-mode">LOOKUP 자동 반영</span>
+        </div>
+        <div class="sd-item" style="background:var(--hq-pale); border-color:var(--hq-border); color:var(--hq);">
+          <span class="sd-icon">📞</span>
+          <span class="sd-label">[본사] 콜리포트</span>
+          <span class="sd-mode">LOOKUP 자동 반영</span>
+        </div>
+        <div class="sd-item" style="background:var(--busan-pale); border-color:var(--busan-border); color:var(--busan);">
+          <span class="sd-icon">📞</span>
+          <span class="sd-label">[부산·호남] 콜리포트</span>
+          <span class="sd-mode">LOOKUP 자동 반영</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════
+       POLICY 02 — 삭제
+  ══════════════════ -->
+  <div class="policy-card">
+    <div class="policy-header" style="background:var(--master-pale); border-bottom-color:var(--master-border);">
+      <div class="ph-num" style="background:var(--delete);">2</div>
+      <div>
+        <div class="ph-title">삭제 정책</div>
+        <div class="ph-sub">콜리포트 0건일 때만 삭제 허용</div>
+      </div>
+      <span class="ph-badge" style="background:var(--delete); color:white;">DELETE RULE</span>
+    </div>
+    <div class="policy-body">
+
+      <div class="delete-flow">
+        <!-- Check -->
+        <div class="df-check">
+          <span class="dc-icon">🔍</span>
+          <div class="dc-title">삭제 버튼 클릭</div>
+          <div class="dc-sub">해당 고유번호에 연결된<br>콜리포트 수 자동 확인</div>
+        </div>
+
+        <!-- Arrow -->
+        <div class="df-arrow">
+          <div style="display:flex;align-items:center;width:100%;">
+            <div class="dfa-line"></div>
+            <div class="dfa-head"></div>
+          </div>
+          <div class="dfa-label">콜리포트<br>수 체크</div>
+        </div>
+
+        <!-- Cases -->
+        <div class="delete-cases">
+          <div class="dc-case allow">
+            <div class="dcc-icon">✅</div>
+            <div>
+              <div class="dcc-condition">콜리포트 0건</div>
+              <div class="dcc-result">삭제 허용</div>
+              <div class="dcc-desc">신규 등록 실수 등 콜리포트가 없는 경우.<br>해당 행 완전 삭제(하드 삭제) 진행.</div>
+            </div>
+          </div>
+          <div class="dc-case block">
+            <div class="dcc-icon">🚫</div>
+            <div>
+              <div class="dcc-condition">콜리포트 1건 이상</div>
+              <div class="dcc-result">삭제 차단</div>
+              <div class="dcc-desc">삭제 불가. 안내 메시지 표시 후<br>종료(WIN/DROP) 처리로 유도.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- System message mockup -->
+      <div class="sys-message">
+        <div><span class="sm-prompt">// 삭제 요청: </span>HQ-2026-001 (ABC사이트)</div>
+        <div><span class="sm-prompt">// 콜리포트 수 확인... </span></div>
+        <div style="margin-top:4px;"><span class="sm-result-ok">→ [콜리포트 0건] 삭제가 완료되었습니다.</span></div>
+        <div style="margin-top:8px; padding-top:8px; border-top:1px solid #30363d;">
+          <div><span class="sm-prompt">// 삭제 요청: </span>BS-2026-003 (DEF사이트)</div>
+          <div><span class="sm-prompt">// 콜리포트 수 확인... </span></div>
+          <div style="margin-top:4px;"><span class="sm-result-err">→ [콜리포트 5건 존재] 삭제할 수 없습니다.</span></div>
+          <div><span class="sm-result-guide">→ 영업 종료 처리가 필요한 경우 현재 상태를 '종료'로 변경해 주세요.</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════
+       POLICY 03 — 종료
+  ══════════════════ -->
+  <div class="policy-card">
+    <div class="policy-header" style="background:var(--honam-pale); border-bottom-color:var(--honam-border);">
+      <div class="ph-num" style="background:var(--close);">3</div>
+      <div>
+        <div class="ph-title">종료 정책</div>
+        <div class="ph-sub">콜리포트가 있는 사이트는 WIN/DROP으로만 마감</div>
+      </div>
+      <span class="ph-badge" style="background:var(--close); color:white;">CLOSE RULE</span>
+    </div>
+    <div class="policy-body">
+
+      <div class="close-flow">
+        <!-- Step 1 -->
+        <div class="cf-node" style="background:var(--call-pale); border-color:var(--call-border);">
+          <span class="cn-icon">⚙️</span>
+          <div class="cn-title">현재 상태 → 종료 선택</div>
+          <div class="cn-sub">영업이 완전히 종료될 때 현재 상태 드롭다운에서 "종료" 선택</div>
+        </div>
+        <!-- Arrow -->
+        <div class="cf-arrow">
+          <div style="display:flex;align-items:center;width:100%;">
+            <div class="cfa-line" style="background:var(--call-border);"></div>
+            <div class="cfa-head" style="border-left-color:var(--call);"></div>
+          </div>
+        </div>
+        <!-- Step 2 -->
+        <div class="cf-node" style="background:#f6f8fa; border-color:var(--gray-light);">
+          <span class="cn-icon">📝</span>
+          <div class="cn-title">WIN / DROP 선택 + 사유 입력</div>
+          <div class="cn-sub">
+            <span style="color:#116329; font-weight:700;">🏆 WIN</span> — 수주 확정<br>
+            <span style="color:#a40e26; font-weight:700;">❌ DROP</span> — 기회 소멸<br>
+            사유란에 간략 내용 기입
+          </div>
+          <div style="margin-top:8px;background:#fff8c5;border:1px solid #d4a72c;border-radius:8px;padding:10px 12px;font-size:11px;line-height:1.8;">
+            <div style="font-weight:700;color:#bf8700;margin-bottom:6px;">🔍 WIN 처리 확인 팝업</div>
+            <div style="color:#57606a;">사이트명 <strong style="color:#0d1117;">ABC Corporation</strong></div>
+            <div style="color:#57606a;">예상 매출 <strong style="color:#0969da;">50,000,000원</strong></div>
+            <div style="color:#57606a;">예상 매입 <strong style="color:#0969da;">30,000,000원</strong></div>
+            <div style="color:#57606a;">예상 매출이익 <strong style="color:#116329;">20,000,000원</strong></div>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+              <span style="background:#f6f8fa;border:1px solid #d0d7de;color:#57606a;padding:3px 12px;border-radius:5px;font-weight:700;">취소</span>
+              <span style="background:#1a7f37;color:#fff;padding:3px 14px;border-radius:5px;font-weight:700;">✓ 확정</span>
+            </div>
+            <div style="font-size:10px;color:#8b949e;margin-top:6px;">* 금액 미입력 시 "미입력" 표시 · 차단 없이 담당자 판단</div>
+          </div>
+        </div>
+        <!-- Arrow -->
+        <div class="cf-arrow">
+          <div style="display:flex;align-items:center;width:100%;">
+            <div class="cfa-line" style="background:#f85149;"></div>
+            <div class="cfa-head" style="border-left-color:#f85149;"></div>
+          </div>
+        </div>
+        <!-- Step 3 -->
+        <div class="cf-node" style="background:#ffebe9; border-color:var(--master-border);">
+          <span class="cn-icon">🔔</span>
+          <div class="cn-title">자동 알림 발송</div>
+          <div class="cn-sub">Slack 또는 이메일로<br>관련자에게 자동 통보</div>
+        </div>
+      </div>
+
+      <!-- Alert destinations -->
+      <div style="font-size:12px; font-weight:700; color:var(--gray); margin-bottom:8px; font-family:'IBM Plex Mono',monospace;">발송 내용</div>
+      <div style="background:var(--gray-pale); border:1px solid var(--gray-light); border-radius:10px; padding:14px 18px; font-size:13px; line-height:1.9; margin-bottom:16px;">
+        📌 <strong>사이트명</strong> &nbsp;|&nbsp; 📋 <strong>사업명</strong> &nbsp;|&nbsp;
+        <span style="color:#116329; font-weight:700;">🏆 WIN</span> or <span style="color:#a40e26; font-weight:700;">❌ DROP</span>
+        &nbsp;|&nbsp; 💬 <strong>사유</strong> &nbsp;|&nbsp; 👤 <strong>담당자</strong> &nbsp;|&nbsp; 📅 <strong>처리일시</strong>
+      </div>
+
+      <div class="alert-destinations">
+        <div class="ad-chip" style="background:#4a154b15; border-color:#4a154b40; color:#4a154b;">
+          <span style="font-size:18px;">💬</span> Slack 자동 발송
+        </div>
+        <div class="ad-chip" style="background:#0969da12; border-color:#0969da40; color:var(--hq);">
+          <span style="font-size:18px;">✉️</span> 이메일 자동 발송
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════
+       전체 정책 요약
+  ══════════════════ -->
+  <div class="summary-box">
+    <div class="sb-title">// 데이터 관리 정책 요약</div>
+
+    <div class="sb-rule">
+      <div class="sbr-num" style="background:var(--edit);">1</div>
+      <div class="sbr-content">
+        <div class="sbr-title">수정</div>
+        <div class="sbr-points">
+          <div class="sbr-point"><strong>수정 위치:</strong> [총괄] 전체 영업 현황 시트 단 1곳</div>
+          <div class="sbr-point"><strong>반영 방식:</strong> 고유번호 기반 LOOKUP → 모든 시트 자동 동기화</div>
+          <div class="sbr-point"><strong>고유번호:</strong> 위드 소속이 바뀌어도 최초 발급 번호 고정 유지</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sb-rule">
+      <div class="sbr-num" style="background:var(--delete);">2</div>
+      <div class="sbr-content">
+        <div class="sbr-title">삭제</div>
+        <div class="sbr-points">
+          <div class="sbr-point"><strong>허용:</strong> 콜리포트 0건인 신규 등록 건 → 하드 삭제</div>
+          <div class="sbr-point"><strong>차단:</strong> 콜리포트 1건 이상 → 삭제 버튼 비활성화 + 안내</div>
+          <div class="sbr-point"><strong>대안:</strong> 콜리포트 있는 건은 반드시 종료(WIN/DROP) 처리</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sb-rule">
+      <div class="sbr-num" style="background:var(--close);">3</div>
+      <div class="sbr-content">
+        <div class="sbr-title">종료</div>
+        <div class="sbr-points">
+          <div class="sbr-point"><strong>방법:</strong> 현재 상태 → "종료" + WIN/DROP 선택 + 사유 입력</div>
+          <div class="sbr-point"><strong>자동화:</strong> 종료 처리 시 Slack / 이메일 자동 알림 발송</div>
+          <div class="sbr-point"><strong>데이터:</strong> 종료 후에도 데이터 보존 — 히스토리 조회 가능</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+
+<!-- TAB 04: 알람 구조 설계 -->
+<div id="tab-alarm" class="tab-content">
+  <div class="tab-inner">
+    <!-- Header -->
+  <div class="header">
+    <div class="badge">NOTIFICATION SYSTEM</div>
+    <h1>🔔 WithSecurity 알람 구조 설계</h1>
+    <p>Slack · 이메일 발송 조건 · 대상 · 메시지 포맷</p>
+  </div>
+
+  <!-- Channel legend -->
+  <div class="channel-legend">
+    <span class="cl-title">CHANNELS</span>
+    <div class="channel-chip" style="background:var(--slack-pale); border-color:var(--slack-border); color:var(--slack);">
+      <span>💬</span> Slack DM — 담당자 본인
+    </div>
+    <div class="channel-chip" style="background:var(--slack-pale); border-color:var(--slack-border); color:var(--slack);">
+      <span>#</span> Slack 채널 — 지사별 전체
+    </div>
+    <div class="channel-chip" style="background:var(--mail-pale); border-color:var(--mail-border); color:var(--mail);">
+      <span>✉️</span> 이메일 — 담당자 본인
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════
+       ALARM 01 — 신규 사이트 등록
+  ══════════════════════════════ -->
+  <div class="alarm-card">
+    <div class="alarm-header" style="background:#f0fff4; border-bottom-color:var(--green-border);">
+      <div class="ah-num" style="background:var(--green);">1</div>
+      <div>
+        <div class="ah-title">신규 사이트 등록</div>
+        <div class="ah-sub">폼 제출 즉시 자동 발송</div>
+      </div>
+      <span class="ah-trigger" style="background:var(--green); color:white;">즉시 발송</span>
+    </div>
+    <div class="alarm-body">
+
+      <div class="trigger-row">
+        <!-- Trigger -->
+        <div class="trigger-node">
+          <span class="tn-icon">📋</span>
+          <div class="tn-title">신규 사이트 등록 폼 제출</div>
+          <div class="tn-sub">고유번호 자동 생성<br>총괄 시트 행 추가</div>
+        </div>
+        <!-- Arrow -->
+        <div class="tr-arrow">
+          <div style="display:flex;align-items:center;">
+            <div class="tra-line" style="background:var(--green-border);"></div>
+            <div class="tra-head" style="border-left:7px solid var(--green-border);"></div>
+          </div>
+          <div class="tra-label">즉시</div>
+        </div>
+        <!-- Recipients -->
+        <div class="recipients-block">
+          <div class="recipient-row" style="background:#f0fff4; border-color:var(--green-border);">
+            <div class="rr-target">
+              <div class="rr-dot" style="background:var(--green);"></div>
+              담당자 본인
+            </div>
+            <div class="rr-channels">
+              <span class="ch-slack">💬 Slack DM</span>
+              <span class="ch-mail">✉️ 이메일</span>
+              <span style="font-size:11px; color:var(--gray);">등록 완료 확인용</span>
+            </div>
+          </div>
+          <div class="recipient-row" style="background:var(--gray-pale); border-color:var(--gray-light);">
+            <div class="rr-target">
+              <div class="rr-dot" style="background:var(--gray);"></div>
+              지사 전체 채널
+            </div>
+            <div class="rr-channels">
+              <span class="ch-slack"># Slack 채널</span>
+              <span style="font-size:11px; color:var(--gray);">위드 소속 기준 해당 지사 채널로 발송</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Message preview -->
+      <div class="msg-preview">
+        <div class="mp-header">
+          <span class="mp-channel-tag" style="background:#4a154b; color:white;">Slack DM</span>
+          <span class="mp-label">담당자 본인</span>
+          <span class="mp-title">신규 사이트 등록 완료</span>
+        </div>
+        <div class="mp-line"><span class="mp-key">🆕 신규 사이트가 등록되었습니다.</span></div>
+        <hr class="mp-divider">
+        <div class="mp-line"><span class="mp-key">고유번호  </span><span class="mp-val blue">HQ-2026-001</span></div>
+        <div class="mp-line"><span class="mp-key">사이트명  </span><span class="mp-val">ABC Corporation</span></div>
+        <div class="mp-line"><span class="mp-key">사업명    </span><span class="mp-val">차세대 보안 시스템 구축</span></div>
+        <div class="mp-line"><span class="mp-key">현재 상태 </span><span class="mp-val yellow">초기제안 (10%)</span></div>
+        <div class="mp-line"><span class="mp-key">제품명    </span><span class="mp-val">withVTM</span></div>
+        <div class="mp-line"><span class="mp-key">담당자    </span><span class="mp-val">홍길동 (본사)</span></div>
+        <div class="mp-line"><span class="mp-key">등록일시  </span><span class="mp-val">2026-02-19 09:32</span></div>
+        <hr class="mp-divider">
+        <div class="mp-line" style="color:#58a6ff; font-size:11px;">→ 시트 바로가기 [링크]</div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════
+       ALARM 02 — 콜리포트 등록
+  ══════════════════════════════ -->
+  <div class="alarm-card">
+    <div class="alarm-header" style="background:var(--yellow-pale); border-bottom-color:var(--yellow-border);">
+      <div class="ah-num" style="background:var(--yellow);">2</div>
+      <div>
+        <div class="ah-title">콜 리포트 등록</div>
+        <div class="ah-sub">폼 제출 즉시 자동 발송</div>
+      </div>
+      <span class="ah-trigger" style="background:var(--yellow); color:white;">즉시 발송</span>
+    </div>
+    <div class="alarm-body">
+
+      <div class="trigger-row">
+        <div class="trigger-node">
+          <span class="tn-icon">📞</span>
+          <div class="tn-title">콜 리포트 폼 제출</div>
+          <div class="tn-sub">총괄 시트 자동 업데이트<br>정체일수 초기화</div>
+        </div>
+        <div class="tr-arrow">
+          <div style="display:flex;align-items:center;">
+            <div class="tra-line" style="background:var(--yellow-border);"></div>
+            <div class="tra-head" style="border-left:7px solid var(--yellow-border);"></div>
+          </div>
+          <div class="tra-label">즉시</div>
+        </div>
+        <div class="recipients-block">
+          <div class="recipient-row" style="background:var(--yellow-pale); border-color:var(--yellow-border);">
+            <div class="rr-target">
+              <div class="rr-dot" style="background:var(--yellow);"></div>
+              담당자 본인
+            </div>
+            <div class="rr-channels">
+              <span class="ch-slack">💬 Slack DM</span>
+              <span class="ch-mail">✉️ 이메일</span>
+              <span style="font-size:11px; color:var(--gray);">등록 확인 + 액션플랜 리마인드</span>
+            </div>
+          </div>
+          <div class="recipient-row" style="background:var(--gray-pale); border-color:var(--gray-light);">
+            <div class="rr-target">
+              <div class="rr-dot" style="background:var(--gray);"></div>
+              지사 전체 채널
+            </div>
+            <div class="rr-channels">
+              <span class="ch-slack"># Slack 채널</span>
+              <span style="font-size:11px; color:var(--gray);">팀 내 영업 활동 공유</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="msg-preview">
+        <div class="mp-header">
+          <span class="mp-channel-tag" style="background:#4a154b; color:white;">Slack DM</span>
+          <span class="mp-label">담당자 본인</span>
+          <span class="mp-title">콜 리포트 등록 완료</span>
+        </div>
+        <div class="mp-line"><span class="mp-key">📞 콜 리포트가 등록되었습니다.</span></div>
+        <hr class="mp-divider">
+        <div class="mp-line"><span class="mp-key">고유번호  </span><span class="mp-val blue">HQ-2026-001</span></div>
+        <div class="mp-line"><span class="mp-key">사이트명  </span><span class="mp-val">ABC Corporation</span></div>
+        <div class="mp-line"><span class="mp-key">방문일시  </span><span class="mp-val">2026-02-19 14:00</span></div>
+        <div class="mp-line"><span class="mp-key">접촉방식  </span><span class="mp-val">방문</span></div>
+        <div class="mp-line"><span class="mp-key">현재 상태 </span><span class="mp-val yellow">OI확인(고객의지) (20%)</span></div>
+        <div class="mp-line"><span class="mp-key">액션플랜  </span><span class="mp-val">다음 주 견적서 제출 예정</span></div>
+        <hr class="mp-divider">
+        <div class="mp-line" style="color:#58a6ff; font-size:11px;">→ 콜 리포트 보기 [링크]</div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════
+       ALARM 03 — 정체일수 경고
+  ══════════════════════════════ -->
+  <div class="alarm-card">
+    <div class="alarm-header" style="background:#fff1e5; border-bottom-color:var(--orange-border);">
+      <div class="ah-num" style="background:var(--orange);">3</div>
+      <div>
+        <div class="ah-title">정체일수 경고</div>
+        <div class="ah-sub">기준일 초과 즉시 자동 감지 후 발송</div>
+      </div>
+      <span class="ah-trigger" style="background:var(--orange); color:white;">기준 초과 즉시</span>
+    </div>
+    <div class="alarm-body">
+
+      <div class="timing-box">
+        <span class="tb-icon">⏱️</span>
+        <div>
+          <strong>감지 방식</strong> — 콜 리포트 등록 후 매일 자정 정체일수 자동 업데이트 →
+          15일 또는 31일 기준 초과되는 순간 즉시 알람 발송.
+          <span style="color:var(--gray); font-size:11px; display:block; margin-top:4px;">* 같은 사이트에 동일 레벨 알람은 하루 1회만 발송 (중복 방지)</span>
+        </div>
+      </div>
+
+      <div class="stag-levels">
+        <!-- 주의 -->
+        <div class="stag-level" style="background:#fff8c5; border-color:var(--yellow-border);">
+          <span class="sl-badge" style="background:var(--yellow-pale); color:var(--yellow); border:1px solid var(--yellow-border);">
+            ⚠️ 주의 — 15일 초과
+          </span>
+          <div class="sl-title">방문 독려 알람</div>
+          <div class="sl-sub">
+            마지막 방문 후 15일이 경과했어요.<br>
+            빠른 시일 내 콜 리포트 등록을 권장합니다.
+          </div>
+          <div class="sl-channels">
+            <span class="ch-slack">💬 Slack DM</span>
+            <span class="ch-mail">✉️ 이메일</span>
+          </div>
+          <div style="margin-top:8px; font-size:11px; color:var(--gray);">대상: 담당자 본인만</div>
+        </div>
+        <!-- 위험 -->
+        <div class="stag-level" style="background:var(--red-pale); border-color:var(--red-border);">
+          <span class="sl-badge" style="background:var(--red-pale); color:var(--red); border:1px solid var(--red-border);">
+            🚨 위험 — 31일 초과
+          </span>
+          <div class="sl-title">긴급 경고 알람</div>
+          <div class="sl-sub">
+            마지막 방문 후 31일이 경과했어요.<br>
+            즉시 고객 접촉 또는 DROP 처리가 필요합니다.
+          </div>
+          <div class="sl-channels">
+            <span class="ch-slack">💬 Slack DM</span>
+            <span class="ch-mail">✉️ 이메일</span>
+            <span class="ch-slack"># Slack 채널</span>
+          </div>
+          <div style="margin-top:8px; font-size:11px; color:var(--red); font-weight:600;">대상: 담당자 본인 + 지사 채널</div>
+        </div>
+      </div>
+
+      <!-- Message preview: 주의 -->
+      <div class="msg-preview">
+        <div class="mp-header">
+          <span class="mp-channel-tag" style="background:#bf8700; color:white;">⚠️ 주의</span>
+          <span class="mp-label">Slack DM · 담당자 본인</span>
+          <span class="mp-title">정체 15일 경고</span>
+        </div>
+        <div class="mp-line"><span class="mp-key">⚠️ 방문이 15일째 없는 사이트가 있습니다.</span></div>
+        <hr class="mp-divider">
+        <div class="mp-line"><span class="mp-key">고유번호  </span><span class="mp-val blue">BS-2026-003</span></div>
+        <div class="mp-line"><span class="mp-key">사이트명  </span><span class="mp-val">DEF Industries</span></div>
+        <div class="mp-line"><span class="mp-key">현재 상태 </span><span class="mp-val yellow">견적 (35%)</span></div>
+        <div class="mp-line"><span class="mp-key">마지막 방문</span><span class="mp-val">2026-02-04</span></div>
+        <div class="mp-line"><span class="mp-key">정체일수  </span><span class="mp-val yellow">15일 ⚠️</span></div>
+        <hr class="mp-divider">
+        <div class="mp-line" style="color:#e3b341;">→ 콜 리포트를 등록해 주세요 [링크]</div>
+      </div>
+
+      <!-- Message preview: 위험 -->
+      <div class="msg-preview">
+        <div class="mp-header">
+          <span class="mp-channel-tag" style="background:#cf222e; color:white;">🚨 위험</span>
+          <span class="mp-label">Slack DM + # 지사채널</span>
+          <span class="mp-title">정체 31일 긴급 경고</span>
+        </div>
+        <div class="mp-line"><span class="mp-key">🚨 긴급 — 방문이 31일째 없는 사이트가 있습니다.</span></div>
+        <hr class="mp-divider">
+        <div class="mp-line"><span class="mp-key">고유번호  </span><span class="mp-val blue">BS-2026-003</span></div>
+        <div class="mp-line"><span class="mp-key">사이트명  </span><span class="mp-val">DEF Industries</span></div>
+        <div class="mp-line"><span class="mp-key">현재 상태 </span><span class="mp-val yellow">견적 (35%)</span></div>
+        <div class="mp-line"><span class="mp-key">마지막 방문</span><span class="mp-val">2026-01-19</span></div>
+        <div class="mp-line"><span class="mp-key">정체일수  </span><span class="mp-val red">31일 🚨</span></div>
+        <hr class="mp-divider">
+        <div class="mp-line" style="color:#f85149; font-weight:700;">→ 즉시 고객 접촉 또는 DROP 처리 필요 [링크]</div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════
+       ALARM 04 — WIN / DROP
+  ══════════════════════════════ -->
+  <div class="alarm-card">
+    <div class="alarm-header" style="background:var(--purple-pale); border-bottom-color:var(--purple-border);">
+      <div class="ah-num" style="background:var(--purple);">4</div>
+      <div>
+        <div class="ah-title">WIN / DROP 종료 처리</div>
+        <div class="ah-sub">종료 처리 즉시 자동 발송</div>
+      </div>
+      <span class="ah-trigger" style="background:var(--purple); color:white;">즉시 발송</span>
+    </div>
+    <div class="alarm-body">
+
+      <div class="win-drop-grid">
+        <!-- WIN -->
+        <div class="wd-card" style="background:var(--green-pale); border-color:var(--green-border);">
+          <span class="wdc-badge" style="background:white; color:var(--green); border:1px solid var(--green-border);">
+            🏆 WIN
+          </span>
+          <div style="font-size:12px; color:var(--text); line-height:1.6;">
+            수주 확정. 팀 전체에 공유하여<br>성과를 함께 축하하는 알람.
+          </div>
+          <div class="wdc-channels">
+            <span class="ch-slack">💬 Slack DM</span>
+            <span class="ch-mail">✉️ 이메일</span>
+            <span class="ch-slack"># Slack 채널</span>
+          </div>
+          <div style="margin-top:8px; font-size:11px; color:var(--green); font-weight:600;">담당자 본인 + 지사 채널</div>
+        </div>
+        <!-- DROP -->
+        <div class="wd-card" style="background:var(--red-pale); border-color:var(--red-border);">
+          <span class="wdc-badge" style="background:white; color:var(--red); border:1px solid var(--red-border);">
+            ❌ DROP
+          </span>
+          <div style="font-size:12px; color:var(--text); line-height:1.6;">
+            기회 소멸. 원인 공유로<br>팀 학습 자료로 활용.
+          </div>
+          <div class="wdc-channels">
+            <span class="ch-slack">💬 Slack DM</span>
+            <span class="ch-mail">✉️ 이메일</span>
+            <span class="ch-slack"># Slack 채널</span>
+          </div>
+          <div style="margin-top:8px; font-size:11px; color:var(--red); font-weight:600;">담당자 본인 + 지사 채널</div>
+        </div>
+      </div>
+
+      <!-- Message preview WIN -->
+      <div class="msg-preview">
+        <div class="mp-header">
+          <span class="mp-channel-tag" style="background:#1a7f37; color:white;"># 지사채널</span>
+          <span class="mp-label">전체 공유</span>
+          <span class="mp-title">🏆 WIN 알람</span>
+        </div>
+        <div class="mp-line"><span class="mp-key">🏆 수주를 축하합니다!</span></div>
+        <hr class="mp-divider">
+        <div class="mp-line"><span class="mp-key">고유번호  </span><span class="mp-val blue">HQ-2026-001</span></div>
+        <div class="mp-line"><span class="mp-key">사이트명  </span><span class="mp-val">ABC Corporation</span></div>
+        <div class="mp-line"><span class="mp-key">사업명    </span><span class="mp-val">차세대 보안 시스템 구축</span></div>
+        <div class="mp-line"><span class="mp-key">제품명    </span><span class="mp-val">withVTM</span></div>
+        <div class="mp-line"><span class="mp-key">담당자    </span><span class="mp-val">홍길동 (본사)</span></div>
+        <div class="mp-line"><span class="mp-key">WIN 사유  </span><span class="mp-val green">고객 예산 확정 및 계약 체결</span></div>
+        <div class="mp-line"><span class="mp-key">처리일시  </span><span class="mp-val">2026-02-19 17:00</span></div>
+      </div>
+
+      <!-- Message preview DROP -->
+      <div class="msg-preview">
+        <div class="mp-header">
+          <span class="mp-channel-tag" style="background:#cf222e; color:white;"># 지사채널</span>
+          <span class="mp-label">전체 공유</span>
+          <span class="mp-title">❌ DROP 알람</span>
+        </div>
+        <div class="mp-line"><span class="mp-key">❌ 영업 기회가 종료되었습니다.</span></div>
+        <hr class="mp-divider">
+        <div class="mp-line"><span class="mp-key">고유번호  </span><span class="mp-val blue">BS-2026-003</span></div>
+        <div class="mp-line"><span class="mp-key">사이트명  </span><span class="mp-val">DEF Industries</span></div>
+        <div class="mp-line"><span class="mp-key">사업명    </span><span class="mp-val">네트워크 보안 강화 프로젝트</span></div>
+        <div class="mp-line"><span class="mp-key">제품명    </span><span class="mp-val">withREX</span></div>
+        <div class="mp-line"><span class="mp-key">담당자    </span><span class="mp-val">김철수 (부산지사)</span></div>
+        <div class="mp-line"><span class="mp-key">DROP 사유 </span><span class="mp-val red">경쟁사 선정으로 예산 소진</span></div>
+        <div class="mp-line"><span class="mp-key">처리일시  </span><span class="mp-val">2026-02-19 16:30</span></div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════
+       전체 요약 테이블
+  ══════════════════ -->
+  <table class="summary-table">
+    <thead>
+      <tr>
+        <th style="width:32px;">#</th>
+        <th style="width:160px;">이벤트</th>
+        <th style="width:100px;">발송 시점</th>
+        <th style="width:180px;">대상</th>
+        <th>채널</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-family:'IBM Plex Mono',monospace; color:var(--gray); font-size:12px;">01</td>
+        <td><div class="st-event"><span>📋</span>신규 사이트 등록</div></td>
+        <td><span class="st-timing" style="background:var(--green-pale); color:var(--green);">즉시</span></td>
+        <td style="font-size:12px;">담당자 본인<br><span style="color:var(--gray);">지사 전체 채널</span></td>
+        <td>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <span class="ch-slack" style="font-size:10px; padding:3px 8px;">💬 DM</span>
+            <span class="ch-mail" style="font-size:10px; padding:3px 8px;">✉️ 메일</span>
+            <span class="ch-slack" style="font-size:10px; padding:3px 8px;"># 채널</span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td style="font-family:'IBM Plex Mono',monospace; color:var(--gray); font-size:12px;">02</td>
+        <td><div class="st-event"><span>📞</span>콜 리포트 등록</div></td>
+        <td><span class="st-timing" style="background:var(--yellow-pale); color:var(--yellow);">즉시</span></td>
+        <td style="font-size:12px;">담당자 본인<br><span style="color:var(--gray);">지사 전체 채널</span></td>
+        <td>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <span class="ch-slack" style="font-size:10px; padding:3px 8px;">💬 DM</span>
+            <span class="ch-mail" style="font-size:10px; padding:3px 8px;">✉️ 메일</span>
+            <span class="ch-slack" style="font-size:10px; padding:3px 8px;"># 채널</span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td style="font-family:'IBM Plex Mono',monospace; color:var(--gray); font-size:12px;">03</td>
+        <td><div class="st-event"><span>⚠️</span>정체 15일 경고</div></td>
+        <td><span class="st-timing" style="background:var(--yellow-pale); color:var(--yellow);">기준 초과 즉시</span></td>
+        <td style="font-size:12px;">담당자 본인</td>
+        <td>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <span class="ch-slack" style="font-size:10px; padding:3px 8px;">💬 DM</span>
+            <span class="ch-mail" style="font-size:10px; padding:3px 8px;">✉️ 메일</span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td style="font-family:'IBM Plex Mono',monospace; color:var(--gray); font-size:12px;">04</td>
+        <td><div class="st-event"><span>🚨</span>정체 31일 위험</div></td>
+        <td><span class="st-timing" style="background:var(--red-pale); color:var(--red);">기준 초과 즉시</span></td>
+        <td style="font-size:12px;">담당자 본인<br><span style="color:var(--red); font-weight:600;">지사 전체 채널</span></td>
+        <td>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <span class="ch-slack" style="font-size:10px; padding:3px 8px;">💬 DM</span>
+            <span class="ch-mail" style="font-size:10px; padding:3px 8px;">✉️ 메일</span>
+            <span class="ch-slack" style="font-size:10px; padding:3px 8px;"># 채널</span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td style="font-family:'IBM Plex Mono',monospace; color:var(--gray); font-size:12px;">05</td>
+        <td><div class="st-event"><span>🏆</span>WIN 종료</div></td>
+        <td><span class="st-timing" style="background:var(--green-pale); color:var(--green);">즉시</span></td>
+        <td style="font-size:12px;">담당자 본인<br><span style="color:var(--gray);">지사 전체 채널</span></td>
+        <td>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <span class="ch-slack" style="font-size:10px; padding:3px 8px;">💬 DM</span>
+            <span class="ch-mail" style="font-size:10px; padding:3px 8px;">✉️ 메일</span>
+            <span class="ch-slack" style="font-size:10px; padding:3px 8px;"># 채널</span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td style="font-family:'IBM Plex Mono',monospace; color:var(--gray); font-size:12px;">06</td>
+        <td><div class="st-event"><span>❌</span>DROP 종료</div></td>
+        <td><span class="st-timing" style="background:var(--red-pale); color:var(--red);">즉시</span></td>
+        <td style="font-size:12px;">담당자 본인<br><span style="color:var(--gray);">지사 전체 채널</span></td>
+        <td>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <span class="ch-slack" style="font-size:10px; padding:3px 8px;">💬 DM</span>
+            <span class="ch-mail" style="font-size:10px; padding:3px 8px;">✉️ 메일</span>
+            <span class="ch-slack" style="font-size:10px; padding:3px 8px;"># 채널</span>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+
+<!-- TAB 05: 대시보드 + 엑셀 다운로드 -->
+<div id="tab-dashboard" class="tab-content">
+  <div class="tab-inner">
+    <!-- ══════════════════════════════════
+     SECTION: 전체 대시보드
+══════════════════════════════════ -->
+
+<!-- Section label -->
+<div style="margin-bottom:18px;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:#0d1117;color:#fff;padding:3px 10px;border-radius:20px;">SCREEN 01</span>
+    <span style="font-size:14px;font-weight:700;color:#0d1117;">전체 대시보드</span>
+    <span style="font-size:12px;color:#57606a;">— 로그인 후 첫 화면 · 전사 현황 한눈에</span>
+  </div>
+</div>
+
+<!-- Dashboard wireframe -->
+<div style="background:#0d1117;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+
+  <!-- Browser chrome -->
+  <div style="background:#161b22;padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #30363d;">
+    <div style="width:10px;height:10px;border-radius:50%;background:#ff5f57;"></div>
+    <div style="width:10px;height:10px;border-radius:50%;background:#febc2e;"></div>
+    <div style="width:10px;height:10px;border-radius:50%;background:#28c840;"></div>
+    <div style="flex:1;background:#21262d;border-radius:6px;padding:4px 12px;margin:0 12px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#58a6ff;">
+      sales.withsecurity.com/dashboard
+    </div>
+  </div>
+
+  <!-- App shell -->
+  <div style="display:flex;min-height:520px;">
+
+    <!-- Sidebar -->
+    <div style="width:200px;background:#161b22;border-right:1px solid #30363d;padding:16px 0;flex-shrink:0;">
+      <div style="padding:0 16px 16px;border-bottom:1px solid #30363d;margin-bottom:12px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#7ee787;font-weight:700;">WithSecurity</div>
+        <div style="font-size:10px;color:#8b949e;margin-top:2px;">영업 관리 시스템</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:0 8px;">
+        <div style="padding:8px 10px;border-radius:6px;background:#1f6feb22;color:#58a6ff;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px;">
+          <span>📊</span> 대시보드
+        </div>
+        <div style="padding:8px 10px;border-radius:6px;color:#8b949e;font-size:12px;display:flex;align-items:center;gap:8px;">
+          <span>📋</span> 영업 현황
+        </div>
+        <div style="padding:8px 10px;border-radius:6px;color:#8b949e;font-size:12px;display:flex;align-items:center;gap:8px;">
+          <span>📞</span> 콜 리포트
+        </div>
+        <div style="padding:8px 10px;border-radius:6px;color:#8b949e;font-size:12px;display:flex;align-items:center;gap:8px;">
+          <span>➕</span> 신규 등록
+        </div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid #30363d;">
+          <div style="padding:8px 10px;border-radius:6px;color:#8b949e;font-size:12px;display:flex;align-items:center;gap:8px;">
+            <span>⚙️</span> 설정
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <div style="flex:1;padding:20px;overflow:hidden;">
+
+      <!-- Top bar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div>
+          <div style="font-size:16px;font-weight:700;color:#e6edf3;">전체 대시보드</div>
+          <div style="font-size:11px;color:#8b949e;margin-top:2px;font-family:'IBM Plex Mono',monospace;">2026-02-19 기준</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div style="background:#21262d;border:1px solid #30363d;border-radius:6px;padding:5px 12px;font-size:11px;color:#8b949e;display:flex;align-items:center;gap:6px;">
+            🏢 전체
+          </div>
+          <div style="background:#1f6feb22;border:1px solid #1f6feb55;border-radius:6px;padding:5px 12px;font-size:11px;color:#58a6ff;font-weight:700;">
+            📥 엑셀 다운로드
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI cards -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px;">
+        <div style="background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px;">
+          <div style="font-size:10px;color:#8b949e;margin-bottom:6px;font-family:'IBM Plex Mono',monospace;">전체 사이트</div>
+          <div style="font-size:22px;font-weight:900;color:#e6edf3;">48</div>
+          <div style="font-size:10px;color:#56d364;margin-top:4px;">↑ 3 이번 달</div>
+        </div>
+        <div style="background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px;">
+          <div style="font-size:10px;color:#8b949e;margin-bottom:6px;font-family:'IBM Plex Mono',monospace;">진행중</div>
+          <div style="font-size:22px;font-weight:900;color:#58a6ff;">35</div>
+          <div style="font-size:10px;color:#8b949e;margin-top:4px;">전체의 73%</div>
+        </div>
+        <div style="background:#161b22;border:1px solid #1a7f3733;border-radius:10px;padding:12px;">
+          <div style="font-size:10px;color:#8b949e;margin-bottom:6px;font-family:'IBM Plex Mono',monospace;">이번 달 WIN</div>
+          <div style="font-size:22px;font-weight:900;color:#56d364;">5</div>
+          <div style="font-size:10px;color:#56d364;margin-top:4px;">↑ 2 지난 달 대비</div>
+        </div>
+        <div style="background:#161b22;border:1px solid #cf222e33;border-radius:10px;padding:12px;">
+          <div style="font-size:10px;color:#8b949e;margin-bottom:6px;font-family:'IBM Plex Mono',monospace;">위험 (31일↑)</div>
+          <div style="font-size:22px;font-weight:900;color:#f85149;">4</div>
+          <div style="font-size:10px;color:#f85149;margin-top:4px;">즉시 조치 필요</div>
+        </div>
+        <div style="background:#161b22;border:1px solid #1f6feb55;border-radius:10px;padding:12px;">
+          <div style="font-size:10px;color:#8b949e;margin-bottom:6px;font-family:'IBM Plex Mono',monospace;">예상 매출 합계</div>
+          <div style="font-size:16px;font-weight:900;color:#79c0ff;">12.4억</div>
+          <div style="display:flex;flex-direction:column;gap:2px;margin-top:4px;">
+            <div style="font-size:10px;color:#56d364;">✅ 확정 4.2억</div>
+            <div style="font-size:10px;color:#8b949e;">⏳ 미확정 8.2억</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+
+        <!-- 상태별 현황 -->
+        <div style="background:#161b22;border:1px solid #30363d;border-radius:10px;padding:14px;">
+          <div style="font-size:12px;font-weight:700;color:#e6edf3;margin-bottom:12px;">📈 상태별 현황</div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-size:10px;color:#8b949e;width:80px;">초기제안</div>
+              <div style="flex:1;background:#21262d;border-radius:3px;height:8px;overflow:hidden;">
+                <div style="width:25%;height:100%;background:#58a6ff;border-radius:3px;"></div>
+              </div>
+              <div style="font-size:10px;color:#8b949e;width:20px;text-align:right;">12</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-size:10px;color:#8b949e;width:80px;">OI확인</div>
+              <div style="flex:1;background:#21262d;border-radius:3px;height:8px;overflow:hidden;">
+                <div style="width:17%;height:100%;background:#79c0ff;border-radius:3px;"></div>
+              </div>
+              <div style="font-size:10px;color:#8b949e;width:20px;text-align:right;">8</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-size:10px;color:#8b949e;width:80px;">견적</div>
+              <div style="flex:1;background:#21262d;border-radius:3px;height:8px;overflow:hidden;">
+                <div style="width:13%;height:100%;background:#e3b341;border-radius:3px;"></div>
+              </div>
+              <div style="font-size:10px;color:#8b949e;width:20px;text-align:right;">6</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-size:10px;color:#8b949e;width:80px;">MAKEUP</div>
+              <div style="flex:1;background:#21262d;border-radius:3px;height:8px;overflow:hidden;">
+                <div style="width:10%;height:100%;background:#ffa657;border-radius:3px;"></div>
+              </div>
+              <div style="font-size:10px;color:#8b949e;width:20px;text-align:right;">5</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-size:10px;color:#8b949e;width:80px;">POC</div>
+              <div style="flex:1;background:#21262d;border-radius:3px;height:8px;overflow:hidden;">
+                <div style="width:6%;height:100%;background:#d2a8ff;border-radius:3px;"></div>
+              </div>
+              <div style="font-size:10px;color:#8b949e;width:20px;text-align:right;">3</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-size:10px;color:#8b949e;width:80px;">RFP&제안</div>
+              <div style="flex:1;background:#21262d;border-radius:3px;height:8px;overflow:hidden;">
+                <div style="width:2%;height:100%;background:#f778ba;border-radius:3px;"></div>
+              </div>
+              <div style="font-size:10px;color:#8b949e;width:20px;text-align:right;">1</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 지사별 현황 -->
+        <div style="background:#161b22;border:1px solid #30363d;border-radius:10px;padding:14px;">
+          <div style="font-size:12px;font-weight:700;color:#e6edf3;margin-bottom:12px;">🏢 지사별 현황</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span style="font-size:11px;color:#58a6ff;font-weight:700;">🏢 본사</span>
+                <span style="font-size:11px;color:#8b949e;">22건</span>
+              </div>
+              <div style="background:#21262d;border-radius:3px;height:8px;overflow:hidden;">
+                <div style="width:66%;height:100%;background:#1f6feb;border-radius:3px;"></div>
+              </div>
+              <div style="display:flex;gap:6px;margin-top:5px;">
+                <span style="font-size:10px;color:#56d364;">WIN 3</span>
+                <span style="font-size:10px;color:#f85149;">DROP 1</span>
+                <span style="font-size:10px;color:#f85149;">위험 2</span>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span style="font-size:11px;color:#56d364;font-weight:700;">🌊 부산지사</span>
+                <span style="font-size:11px;color:#8b949e;">15건</span>
+              </div>
+              <div style="background:#21262d;border-radius:3px;height:8px;overflow:hidden;">
+                <div style="width:45%;height:100%;background:#1a7f37;border-radius:3px;"></div>
+              </div>
+              <div style="display:flex;gap:6px;margin-top:5px;">
+                <span style="font-size:10px;color:#56d364;">WIN 2</span>
+                <span style="font-size:10px;color:#f85149;">DROP 2</span>
+                <span style="font-size:10px;color:#f85149;">위험 1</span>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span style="font-size:11px;color:#d2a8ff;font-weight:700;">🌿 호남지사</span>
+                <span style="font-size:11px;color:#8b949e;">11건</span>
+              </div>
+              <div style="background:#21262d;border-radius:3px;height:8px;overflow:hidden;">
+                <div style="width:33%;height:100%;background:#8250df;border-radius:3px;"></div>
+              </div>
+              <div style="display:flex;gap:6px;margin-top:5px;">
+                <span style="font-size:10px;color:#56d364;">WIN 0</span>
+                <span style="font-size:10px;color:#f85149;">DROP 1</span>
+                <span style="font-size:10px;color:#f85149;">위험 1</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 위험/주의 사이트 목록 -->
+      <div style="background:#161b22;border:1px solid #cf222e44;border-radius:10px;padding:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:700;color:#f85149;">🚨 즉시 조치 필요 사이트</div>
+          <div style="font-size:10px;color:#8b949e;font-family:'IBM Plex Mono',monospace;">정체 15일 이상</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:grid;grid-template-columns:80px 1fr 80px 60px 60px 70px;gap:8px;padding:7px 10px;background:#21262d;border-radius:6px;font-size:11px;">
+            <span style="color:#79c0ff;font-family:'IBM Plex Mono',monospace;">BS-2026-003</span>
+            <span style="color:#e6edf3;">DEF Industries</span>
+            <span style="color:#e3b341;">견적 (35%)</span>
+            <span style="color:#8b949e;">김철수</span>
+            <span style="color:#f85149;font-weight:700;">31일 🚨</span>
+            <span style="background:#cf222e22;color:#f85149;padding:2px 6px;border-radius:4px;text-align:center;font-weight:700;">위험</span>
+          </div>
+          <div style="display:grid;grid-template-columns:80px 1fr 80px 60px 60px 70px;gap:8px;padding:7px 10px;background:#21262d;border-radius:6px;font-size:11px;">
+            <span style="color:#79c0ff;font-family:'IBM Plex Mono',monospace;">HN-2026-002</span>
+            <span style="color:#e6edf3;">GHI Networks</span>
+            <span style="color:#ffa657;">MAKEUP (50%)</span>
+            <span style="color:#8b949e;">이영희</span>
+            <span style="color:#e3b341;font-weight:700;">18일 ⚠️</span>
+            <span style="background:#bf870022;color:#e3b341;padding:2px 6px;border-radius:4px;text-align:center;font-weight:700;">주의</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 진척율 슬라이더 -->
+<div style="background:#161b22;border:1px solid #30363d;border-radius:10px;padding:16px;margin-bottom:10px;">
+
+  <!-- Header row -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <div style="font-size:12px;font-weight:700;color:#e6edf3;">📊 진척율 필터</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#58a6ff;">
+      50% 이하
+    </div>
+  </div>
+
+  <!-- Slider track -->
+  <div style="position:relative;height:20px;margin-bottom:14px;">
+    <!-- Track background -->
+    <div style="position:absolute;top:50%;transform:translateY(-50%);width:100%;height:5px;background:#30363d;border-radius:3px;"></div>
+    <!-- Filled portion -->
+    <div style="position:absolute;top:50%;transform:translateY(-50%);width:50%;height:5px;background:linear-gradient(to right,#1f6feb,#58a6ff);border-radius:3px;"></div>
+    <!-- Thumb -->
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:16px;height:16px;background:#58a6ff;border-radius:50%;border:2px solid #0d1117;box-shadow:0 0 0 3px #1f6feb55;"></div>
+    <!-- Tick labels -->
+    <div style="position:absolute;top:16px;left:0;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#8b949e;">0%</div>
+    <div style="position:absolute;top:16px;left:25%;transform:translateX(-50%);font-family:'IBM Plex Mono',monospace;font-size:9px;color:#8b949e;">25%</div>
+    <div style="position:absolute;top:16px;left:50%;transform:translateX(-50%);font-family:'IBM Plex Mono',monospace;font-size:9px;color:#58a6ff;font-weight:700;">50%</div>
+    <div style="position:absolute;top:16px;left:75%;transform:translateX(-50%);font-family:'IBM Plex Mono',monospace;font-size:9px;color:#8b949e;">75%</div>
+    <div style="position:absolute;top:16px;right:0;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#8b949e;">100%</div>
+  </div>
+
+  <!-- Filtered result list -->
+  <div style="margin-top:20px;">
+    <div style="font-size:10px;color:#8b949e;font-family:'IBM Plex Mono',monospace;margin-bottom:8px;">50% 이하 사이트 — 23건</div>
+    <div style="display:flex;flex-direction:column;gap:5px;">
+
+      <!-- 10% -->
+      <div style="display:grid;grid-template-columns:80px 1fr 60px 80px 55px;gap:8px;padding:7px 10px;background:#21262d;border-radius:6px;font-size:11px;align-items:center;">
+        <span style="color:#79c0ff;font-family:'IBM Plex Mono',monospace;font-size:10px;">HQ-2026-005</span>
+        <span style="color:#e6edf3;">JKL Solutions</span>
+        <span style="color:#8b949e;">초기제안</span>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <div style="background:#30363d;border-radius:3px;height:4px;flex:1;overflow:hidden;">
+            <div style="width:10%;height:100%;background:#58a6ff;border-radius:3px;"></div>
+          </div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#58a6ff;">10%</span>
+        </div>
+        <span style="color:#56d364;font-size:10px;">5일</span>
+      </div>
+
+      <!-- 20% -->
+      <div style="display:grid;grid-template-columns:80px 1fr 60px 80px 55px;gap:8px;padding:7px 10px;background:#21262d;border-radius:6px;font-size:11px;align-items:center;">
+        <span style="color:#79c0ff;font-family:'IBM Plex Mono',monospace;font-size:10px;">HQ-2026-001</span>
+        <span style="color:#e6edf3;">ABC Corporation</span>
+        <span style="color:#8b949e;">OI확인</span>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <div style="background:#30363d;border-radius:3px;height:4px;flex:1;overflow:hidden;">
+            <div style="width:20%;height:100%;background:#79c0ff;border-radius:3px;"></div>
+          </div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#79c0ff;">20%</span>
+        </div>
+        <span style="color:#56d364;font-size:10px;">8일</span>
+      </div>
+
+      <!-- 35% -->
+      <div style="display:grid;grid-template-columns:80px 1fr 60px 80px 55px;gap:8px;padding:7px 10px;background:#21262d;border-radius:6px;font-size:11px;align-items:center;">
+        <span style="color:#79c0ff;font-family:'IBM Plex Mono',monospace;font-size:10px;">BS-2026-003</span>
+        <span style="color:#e6edf3;">DEF Industries</span>
+        <span style="color:#8b949e;">견적</span>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <div style="background:#30363d;border-radius:3px;height:4px;flex:1;overflow:hidden;">
+            <div style="width:35%;height:100%;background:#e3b341;border-radius:3px;"></div>
+          </div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#e3b341;">35%</span>
+        </div>
+        <span style="color:#f85149;font-size:10px;font-weight:700;">31일 🚨</span>
+      </div>
+
+      <!-- 50% -->
+      <div style="display:grid;grid-template-columns:80px 1fr 60px 80px 55px;gap:8px;padding:7px 10px;background:#21262d;border-radius:6px;font-size:11px;align-items:center;">
+        <span style="color:#79c0ff;font-family:'IBM Plex Mono',monospace;font-size:10px;">HN-2026-002</span>
+        <span style="color:#e6edf3;">GHI Networks</span>
+        <span style="color:#8b949e;">MAKEUP</span>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <div style="background:#30363d;border-radius:3px;height:4px;flex:1;overflow:hidden;">
+            <div style="width:50%;height:100%;background:#ffa657;border-radius:3px;"></div>
+          </div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#ffa657;">50%</span>
+        </div>
+        <span style="color:#e3b341;font-size:10px;">18일 ⚠️</span>
+      </div>
+
+      <div style="text-align:center;font-size:10px;color:#8b949e;padding:6px;font-family:'IBM Plex Mono',monospace;">
+        + 19건 더보기 →
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard components spec -->
+<div style="background:#fff;border:1px solid #d0d7de;border-radius:16px;overflow:hidden;margin-top:4px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+  <div style="background:#f6f8fa;padding:14px 24px;border-bottom:1px solid #d0d7de;display:flex;align-items:center;gap:10px;">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:#0d1117;color:#7ee787;padding:2px 8px;border-radius:4px;">COMPONENTS</span>
+    <span style="font-size:13px;font-weight:700;color:#0d1117;">대시보드 구성 요소 명세</span>
+  </div>
+  <div style="padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+    <div style="background:#f6f8fa;border:1px solid #d0d7de;border-radius:10px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;color:#0d1117;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        <span>📌</span> KPI 카드 (4개)
+      </div>
+      <div style="font-size:12px;color:#57606a;line-height:1.7;">
+        전체 사이트 수 · 진행중 건수<br>
+        이번 달 WIN 수 · 위험 사이트 수<br>
+        <span style="color:#0969da;font-size:11px;">→ 지사 필터 선택 시 해당 지사 기준으로 변경</span>
+      </div>
+    </div>
+
+    <div style="background:#f6f8fa;border:1px solid #d0d7de;border-radius:10px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;color:#0d1117;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        <span>📈</span> 상태별 현황 차트
+      </div>
+      <div style="font-size:12px;color:#57606a;line-height:1.7;">
+        초기제안 ~ RFP&제안 단계별 건수<br>
+        가로 바 차트<br>
+        <span style="color:#0969da;font-size:11px;">→ 클릭 시 해당 상태 사이트 목록으로 이동</span>
+      </div>
+    </div>
+
+    <div style="background:#f6f8fa;border:1px solid #d0d7de;border-radius:10px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;color:#0d1117;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        <span>🏢</span> 지사별 현황
+      </div>
+      <div style="font-size:12px;color:#57606a;line-height:1.7;">
+        본사 / 부산 / 호남 건수 + 진척 바<br>
+        WIN · DROP · 위험 건수 표시<br>
+        <span style="color:#0969da;font-size:11px;">→ 클릭 시 해당 지사 필터로 전환</span>
+      </div>
+    </div>
+
+    <div style="background:#ffebe9;border:1px solid #ff8182;border-radius:10px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;color:#cf222e;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        <span>🚨</span> 즉시 조치 필요 목록
+      </div>
+      <div style="font-size:12px;color:#57606a;line-height:1.7;">
+        정체 15일 이상 사이트 자동 노출<br>
+        위험(31일↑) 우선 정렬<br>
+        <span style="color:#cf222e;font-size:11px;">→ 클릭 시 해당 사이트 상세로 이동</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Divider -->
+<div style="height:1px;background:#d0d7de;margin:8px 0;"></div>
+
+<!-- ══════════════════════════════════
+     SECTION: 엑셀 다운로드
+══════════════════════════════════ -->
+
+<div style="margin-bottom:18px;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:#0d1117;color:#fff;padding:3px 10px;border-radius:20px;">SCREEN 02</span>
+    <span style="font-size:14px;font-weight:700;color:#0d1117;">엑셀 다운로드</span>
+    <span style="font-size:12px;color:#57606a;">— 현재 화면 기준 데이터 즉시 추출</span>
+  </div>
+</div>
+
+<div style="background:#fff;border:1px solid #d0d7de;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+
+  <!-- Header -->
+  <div style="background:#ddf4ff;padding:14px 24px;border-bottom:1px solid #54aeff;display:flex;align-items:center;gap:12px;">
+    <span style="font-size:24px;">📥</span>
+    <div>
+      <div style="font-size:15px;font-weight:700;color:#0d1117;">엑셀 다운로드 스펙</div>
+      <div style="font-size:12px;color:#57606a;margin-top:2px;">SheetJS 활용 · 브라우저에서 즉시 생성 · 서버 불필요</div>
+    </div>
+    <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;background:#0969da;color:#fff;padding:3px 10px;border-radius:20px;">CLIENT-SIDE</span>
+  </div>
+
+  <div style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+
+    <!-- Download targets -->
+    <div>
+      <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:#57606a;margin-bottom:10px;">다운로드 대상 시트</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+
+        <div style="background:#ffebe9;border:1px solid #ff8182;border-radius:10px;padding:14px;">
+          <div style="font-size:13px;font-weight:700;color:#cf222e;margin-bottom:8px;">📊 [총괄] 전체 영업 현황</div>
+          <div style="font-size:12px;color:#57606a;line-height:1.7;margin-bottom:10px;">
+            전 지사 통합 데이터<br>
+            필터 조건 그대로 반영
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            <div style="background:#fff;border:1px dashed #ff8182;border-radius:6px;padding:7px 10px;font-size:11px;color:#57606a;display:flex;align-items:center;gap:6px;">
+              <span>📄</span> 전체_영업현황_20260219.xlsx
+            </div>
+            <div style="background:#fff;border:1px dashed #ff8182;border-radius:6px;padding:7px 10px;font-size:11px;color:#57606a;display:flex;align-items:center;gap:6px;">
+              <span>📄</span> 본사_영업현황_20260219.xlsx
+            </div>
+          </div>
+        </div>
+
+        <div style="background:#fff8c5;border:1px solid #d4a72c;border-radius:10px;padding:14px;">
+          <div style="font-size:13px;font-weight:700;color:#bf8700;margin-bottom:8px;">📞 콜 리포트</div>
+          <div style="font-size:12px;color:#57606a;line-height:1.7;margin-bottom:10px;">
+            선택된 사이트 또는 전체<br>
+            기간 필터 적용 가능
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            <div style="background:#fff;border:1px dashed #d4a72c;border-radius:6px;padding:7px 10px;font-size:11px;color:#57606a;display:flex;align-items:center;gap:6px;">
+              <span>📄</span> 전체_콜리포트_20260219.xlsx
+            </div>
+            <div style="background:#fff;border:1px dashed #d4a72c;border-radius:6px;padding:7px 10px;font-size:11px;color:#57606a;display:flex;align-items:center;gap:6px;">
+              <span>📄</span> HQ-2026-001_콜리포트.xlsx
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Download options -->
+    <div style="background:#f6f8fa;border:1px solid #d0d7de;border-radius:10px;padding:16px;">
+      <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:#57606a;margin-bottom:12px;">다운로드 옵션</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+
+        <div style="background:#fff;border:1px solid #d0d7de;border-radius:8px;padding:12px;">
+          <div style="font-size:12px;font-weight:700;color:#0d1117;margin-bottom:6px;">📅 기간 필터</div>
+          <div style="font-size:11px;color:#57606a;line-height:1.6;">
+            시작일 ~ 종료일 선택<br>
+            등록일시 기준 필터링
+          </div>
+        </div>
+
+        <div style="background:#fff;border:1px solid #d0d7de;border-radius:8px;padding:12px;">
+          <div style="font-size:12px;font-weight:700;color:#0d1117;margin-bottom:6px;">🏢 지사 필터</div>
+          <div style="font-size:11px;color:#57606a;line-height:1.6;">
+            전체 / 본사 / 부산 / 호남<br>
+            현재 선택된 뷰 기준
+          </div>
+        </div>
+
+        <div style="background:#fff;border:1px solid #d0d7de;border-radius:8px;padding:12px;">
+          <div style="font-size:12px;font-weight:700;color:#0d1117;margin-bottom:6px;">📊 상태 필터</div>
+          <div style="font-size:11px;color:#57606a;line-height:1.6;">
+            진행중 / 종료 / 전체<br>
+            WIN·DROP 포함 여부 선택
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Excel file spec -->
+    <div>
+      <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:#57606a;margin-bottom:10px;">엑셀 파일 구조</div>
+      <div style="background:#0d1117;border-radius:10px;padding:16px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c9d1d9;line-height:1.8;">
+        <div style="color:#7ee787;margin-bottom:8px;">// 전체_영업현황_20260219.xlsx</div>
+        <div><span style="color:#8b949e;">Sheet 1</span> <span style="color:#79c0ff;">[총괄] 전체 영업 현황</span> <span style="color:#8b949e;">— 헤더 고정 · 열너비 자동 조정</span></div>
+        <div><span style="color:#8b949e;">Sheet 2</span> <span style="color:#79c0ff;">[본사] 영업 현황</span></div>
+        <div><span style="color:#8b949e;">Sheet 3</span> <span style="color:#79c0ff;">[부산지사] 영업 현황</span></div>
+        <div><span style="color:#8b949e;">Sheet 4</span> <span style="color:#79c0ff;">[호남지사] 영업 현황</span></div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid #30363d;">
+          <div style="color:#8b949e;">* 판정 컬럼: 위험(빨강) · 주의(노랑) · 정상(초록) 색상 자동 적용</div>
+          <div style="color:#8b949e;">* WIN/DROP 행: 배경색으로 구분</div>
+          <div style="color:#8b949e;">* 파일명: [구분]_[시트명]_[YYYYMMDD].xlsx 형식</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Where download button appears -->
+    <div style="background:#ddf4ff;border:1px solid #54aeff;border-radius:10px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;color:#0969da;margin-bottom:10px;">📌 다운로드 버튼 위치</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#57606a;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="background:#0969da;color:#fff;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;">대시보드</span>
+          우상단 — 현재 필터 기준 전체 다운로드
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="background:#0969da;color:#fff;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;">영업 현황 목록</span>
+          우상단 — 현재 보이는 목록 그대로 다운로드
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="background:#bf8700;color:#fff;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;">사이트 상세</span>
+          해당 사이트 콜리포트 전체 다운로드
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Divider -->
+<div style="height:1px;background:#d0d7de;margin:8px 0;"></div>
+
+<div style="margin-bottom:18px;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:#0d1117;color:#fff;padding:3px 10px;border-radius:20px;">SCREEN 03</span>
+    <span style="font-size:14px;font-weight:700;color:#0d1117;">폼 접근 위치</span>
+    <span style="font-size:12px;color:#57606a;">— 신규 등록 · 콜리포트 등록 UI 배치</span>
+  </div>
+</div>
+<!-- ════════════════════════════
+       SCREEN 01 — 신규 사이트 등록
+       사이드바에서 접근
+  ════════════════════════════ -->
+  <div>
+    <div class="screen-label">
+      <span class="num">SCREEN 01</span>
+      <span class="title">신규 사이트 등록</span>
+      <span class="sub">— 사이드바 ➕ 신규 등록 클릭 → 우측 슬라이드 패널</span>
+    </div>
+
+    <div class="app-shell">
+      <div class="browser-bar">
+        <div class="dots">
+          <span style="background:#ff5f57;"></span>
+          <span style="background:#febc2e;"></span>
+          <span style="background:#28c840;"></span>
+        </div>
+        <div class="url">sales.withsecurity.com/sites</div>
+      </div>
+
+      <div class="app-body">
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <div class="sidebar-logo">
+            <div class="name">WithSecurity</div>
+            <div class="sub">영업 관리 시스템</div>
+          </div>
+          <div class="nav-items">
+            <div class="nav-item">📊 대시보드</div>
+            <div class="nav-item active">📋 영업 현황</div>
+            <div class="nav-item">📞 콜 리포트</div>
+            <div class="nav-divider"></div>
+            <div class="nav-item highlight">➕ 신규 등록</div>
+          </div>
+        </div>
+
+        <!-- Main -->
+        <div class="main">
+          <div class="main-topbar">
+            <div class="page-title">전체 영업 현황</div>
+            <div class="actions">
+              <div class="btn btn-secondary">📥 엑셀</div>
+              <div class="btn btn-primary">➕ 신규 사이트</div>
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <div class="filter-chip active">전체</div>
+            <div class="filter-chip">🏢 본사</div>
+            <div class="filter-chip">🌊 부산</div>
+            <div class="filter-chip">🌿 호남</div>
+          </div>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>고유번호</th><th>사이트명</th><th>현재 상태</th>
+                <th>진척율</th><th>담당자</th><th>정체</th><th>액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-family:'IBM Plex Mono',monospace;color:#79c0ff;font-size:10px;">HQ-2026-001</td>
+                <td>ABC Corporation</td>
+                <td><span class="status-badge" style="background:#e3b34122;color:#e3b341;">OI확인</span></td>
+                <td><div class="progress-bar-wrap"><div class="progress-bar"><div class="progress-fill" style="width:20%;background:#e3b341;"></div></div><span style="font-size:10px;color:#8b949e;">20%</span></div></td>
+                <td style="color:#8b949e;">홍길동</td>
+                <td><span style="color:#56d364;font-size:10px;">8일</span></td>
+                <td><span class="call-btn">📞 콜리포트</span></td>
+              </tr>
+              <tr>
+                <td style="font-family:'IBM Plex Mono',monospace;color:#79c0ff;font-size:10px;">BS-2026-003</td>
+                <td>DEF Industries</td>
+                <td><span class="status-badge" style="background:#58a6ff22;color:#58a6ff;">견적</span></td>
+                <td><div class="progress-bar-wrap"><div class="progress-bar"><div class="progress-fill" style="width:35%;background:#58a6ff;"></div></div><span style="font-size:10px;color:#8b949e;">35%</span></div></td>
+                <td style="color:#8b949e;">김철수</td>
+                <td><span style="color:#f85149;font-size:10px;font-weight:700;">31일 🚨</span></td>
+                <td><span class="call-btn">📞 콜리포트</span></td>
+              </tr>
+              <tr style="opacity:0.4;">
+                <td style="font-family:'IBM Plex Mono',monospace;color:#79c0ff;font-size:10px;">HN-2026-002</td>
+                <td>GHI Networks</td>
+                <td><span class="status-badge" style="background:#ffa65722;color:#ffa657;">MAKEUP</span></td>
+                <td><div class="progress-bar-wrap"><div class="progress-bar"><div class="progress-fill" style="width:50%;background:#ffa657;"></div></div><span style="font-size:10px;color:#8b949e;">50%</span></div></td>
+                <td style="color:#8b949e;">이영희</td>
+                <td><span style="color:#e3b341;font-size:10px;">18일 ⚠️</span></td>
+                <td><span class="call-btn">📞 콜리포트</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Slide-in form panel: 신규 사이트 등록 -->
+        <div class="form-panel">
+          <div class="form-panel-header" style="background:#238636;">
+            <div class="fph-title">➕ 신규 사이트 등록</div>
+            <div class="fph-close">✕</div>
+          </div>
+          <div class="form-panel-body">
+            <div class="form-field-mini">
+              <div class="ffm-label">위드 담당자</div>
+              <div class="ffm-input auto">🔐 홍길동 (자동)</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">위드 소속 *</div>
+              <div class="ffm-input">🏢 본사 ▾</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">사이트명 *</div>
+              <div class="ffm-input" style="color:#6e7681;">사이트명 입력</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">사업명</div>
+              <div class="ffm-input" style="color:#6e7681;">미정 시 공란</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">고객 담당자 *</div>
+              <div class="ffm-input" style="color:#6e7681;">이름 입력</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">현재 상태 *</div>
+              <div class="ffm-input">초기제안 ▾</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">제품명 *</div>
+              <div class="ffm-input">withVTM ▾</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">직판/파트너 *</div>
+              <div class="ffm-input">직판 ▾</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">유입경로 *</div>
+              <div class="ffm-input">인바운드 ▾</div>
+            </div>
+          </div>
+          <div class="form-panel-footer">
+            <div class="btn btn-secondary" style="flex:1;justify-content:center;">취소</div>
+            <div class="btn btn-primary" style="flex:2;justify-content:center;">✓ 등록 완료</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Callout -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
+      <div class="callout" style="border-color:#238636;background:#dafbe1;">
+        <div class="ca-title" style="color:#1a7f37;">① 사이드바 ➕ 신규 등록</div>
+        <div class="ca-sub">어느 화면에서든 사이드바 고정 메뉴로 접근. 클릭하면 현재 화면 위에 우측에서 패널이 슬라이드인.</div>
+      </div>
+      <div class="callout" style="border-color:#238636;background:#dafbe1;">
+        <div class="ca-title" style="color:#1a7f37;">② 우측 슬라이드 패널</div>
+        <div class="ca-sub">기존 목록 화면을 가리지 않고 우측에서 등장. 위드 담당자는 로그인 사용자 자동 세팅. 등록 후 목록에 즉시 반영.</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════
+       SCREEN 02 — 콜 리포트 등록
+       목록 행에서 접근
+  ════════════════════════════ -->
+  <div>
+    <div class="screen-label">
+      <span class="num">SCREEN 02</span>
+      <span class="title">콜 리포트 등록</span>
+      <span class="sub">— 영업 현황 목록 행의 📞 콜리포트 버튼 클릭 → 우측 슬라이드 패널</span>
+    </div>
+
+    <div class="app-shell">
+      <div class="browser-bar">
+        <div class="dots">
+          <span style="background:#ff5f57;"></span>
+          <span style="background:#febc2e;"></span>
+          <span style="background:#28c840;"></span>
+        </div>
+        <div class="url">sales.withsecurity.com/sites</div>
+      </div>
+
+      <div class="app-body">
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <div class="sidebar-logo">
+            <div class="name">WithSecurity</div>
+            <div class="sub">영업 관리 시스템</div>
+          </div>
+          <div class="nav-items">
+            <div class="nav-item">📊 대시보드</div>
+            <div class="nav-item active">📋 영업 현황</div>
+            <div class="nav-item">📞 콜 리포트</div>
+            <div class="nav-divider"></div>
+            <div class="nav-item highlight" style="background:transparent;color:#8b949e;">➕ 신규 등록</div>
+          </div>
+        </div>
+
+        <!-- Main -->
+        <div class="main">
+          <div class="main-topbar">
+            <div class="page-title">전체 영업 현황</div>
+            <div class="actions">
+              <div class="btn btn-secondary">📥 엑셀</div>
+              <div class="btn btn-primary">➕ 신규 사이트</div>
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <div class="filter-chip active">전체</div>
+            <div class="filter-chip">🏢 본사</div>
+            <div class="filter-chip">🌊 부산</div>
+            <div class="filter-chip">🌿 호남</div>
+          </div>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>고유번호</th><th>사이트명</th><th>현재 상태</th>
+                <th>진척율</th><th>담당자</th><th>정체</th><th>액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="opacity:0.4;">
+                <td style="font-family:'IBM Plex Mono',monospace;color:#79c0ff;font-size:10px;">HQ-2026-001</td>
+                <td>ABC Corporation</td>
+                <td><span class="status-badge" style="background:#e3b34122;color:#e3b341;">OI확인</span></td>
+                <td><div class="progress-bar-wrap"><div class="progress-bar"><div class="progress-fill" style="width:20%;background:#e3b341;"></div></div><span style="font-size:10px;color:#8b949e;">20%</span></div></td>
+                <td style="color:#8b949e;">홍길동</td>
+                <td><span style="color:#56d364;font-size:10px;">8일</span></td>
+                <td><span class="call-btn">📞 콜리포트</span></td>
+              </tr>
+              <!-- Highlighted row -->
+              <tr style="background:#bf870011;">
+                <td style="font-family:'IBM Plex Mono',monospace;color:#79c0ff;font-size:10px;">BS-2026-003</td>
+                <td style="color:#e6edf3;font-weight:700;">DEF Industries</td>
+                <td><span class="status-badge" style="background:#58a6ff22;color:#58a6ff;">견적</span></td>
+                <td><div class="progress-bar-wrap"><div class="progress-bar"><div class="progress-fill" style="width:35%;background:#58a6ff;"></div></div><span style="font-size:10px;color:#8b949e;">35%</span></div></td>
+                <td style="color:#8b949e;">김철수</td>
+                <td><span style="color:#f85149;font-size:10px;font-weight:700;">31일 🚨</span></td>
+                <td><span class="call-btn highlighted">📞 콜리포트</span></td>
+              </tr>
+              <tr style="opacity:0.4;">
+                <td style="font-family:'IBM Plex Mono',monospace;color:#79c0ff;font-size:10px;">HN-2026-002</td>
+                <td>GHI Networks</td>
+                <td><span class="status-badge" style="background:#ffa65722;color:#ffa657;">MAKEUP</span></td>
+                <td><div class="progress-bar-wrap"><div class="progress-bar"><div class="progress-fill" style="width:50%;background:#ffa657;"></div></div><span style="font-size:10px;color:#8b949e;">50%</span></div></td>
+                <td style="color:#8b949e;">이영희</td>
+                <td><span style="color:#e3b341;font-size:10px;">18일 ⚠️</span></td>
+                <td><span class="call-btn">📞 콜리포트</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Slide-in form panel: 콜 리포트 -->
+        <div class="form-panel">
+          <div class="form-panel-header" style="background:#bf8700;">
+            <div class="fph-title">📞 콜 리포트 등록</div>
+            <div class="fph-close">✕</div>
+          </div>
+          <div class="form-panel-body">
+            <div class="form-field-mini">
+              <div class="ffm-label">위드 담당자</div>
+              <div class="ffm-input auto">🔐 김철수 (자동)</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">고유번호</div>
+              <div class="ffm-input prefilled">BS-2026-003 (자동)</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">사이트명</div>
+              <div class="ffm-input prefilled">DEF Industries (자동)</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">사업명</div>
+              <div class="ffm-input prefilled">네트워크 보안 강화 (자동)</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">접촉방식 *</div>
+              <div class="ffm-input">방문 ▾</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">방문일시 *</div>
+              <div class="ffm-input" style="color:#6e7681;">2026-02-19</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">고객 참석자 *</div>
+              <div class="ffm-input" style="color:#6e7681;">이름 입력</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">미팅목적 *</div>
+              <div class="ffm-input" style="color:#6e7681;">목적 입력</div>
+            </div>
+            <div class="form-field-mini">
+              <div class="ffm-label">현재 상태 *</div>
+              <div class="ffm-input">견적 ▾</div>
+            </div>
+            <div style="background:#bf870022;border:1px solid #d4a72c55;border-radius:6px;padding:8px;font-size:10px;color:#e3b341;">
+              ⚡ 저장 시 총괄 시트 현재 상태 자동 업데이트
+            </div>
+          </div>
+          <div class="form-panel-footer">
+            <div class="btn btn-secondary" style="flex:1;justify-content:center;">취소</div>
+            <div class="btn" style="flex:2;justify-content:center;background:#bf8700;color:#fff;">✓ 등록 완료</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Callout -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:16px;">
+      <div class="callout" style="border-color:#d4a72c;background:#fff8c5;">
+        <div class="ca-title" style="color:#bf8700;">① 행에서 바로 클릭</div>
+        <div class="ca-sub">각 사이트 행 우측 📞 콜리포트 버튼. 어떤 사이트인지 이미 알고 있는 상태에서 바로 접근.</div>
+      </div>
+      <div class="callout" style="border-color:#d4a72c;background:#fff8c5;">
+        <div class="ca-title" style="color:#bf8700;">② 고유번호·사이트·사업명 자동 세팅</div>
+        <div class="ca-sub">버튼 클릭 시 해당 사이트 정보가 패널에 자동으로 채워짐. 선택하는 번거로움 없음.</div>
+      </div>
+      <div class="callout" style="border-color:#d4a72c;background:#fff8c5;">
+        <div class="ca-title" style="color:#bf8700;">③ 목록 확인하면서 작성</div>
+        <div class="ca-sub">슬라이드 패널이라 기존 목록이 왼쪽에 그대로 보임. 다른 사이트 정보 참고하면서 작성 가능.</div>
+      </div>
+    </div>
+  </div>
+
+
+  </div>
+</div>
+
+<script>
+function switchTab(name, btn) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  // Show selected
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  // Scroll to top
+  window.scrollTo(0, 0);
+}
+</script>
+</body>
+</html>
